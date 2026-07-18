@@ -2,22 +2,538 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta
-      http-equiv="refresh"
-      content="0; url=./civilization_rts_hex_drag_compact_audio_v3.html"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>文明：星火纪元</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#07101c" />
     <link
-      rel="canonical"
-      href="./civilization_rts_hex_drag_compact_audio_v3.html"
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop stop-color=%27%23071325%27/%3E%3Cstop offset=%271%27 stop-color=%27%23153658%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27url(%23g)%27/%3E%3Cpath d=%27M32 7 53.7 19.5v25L32 57 10.3 44.5v-25Z%27 fill=%27none%27 stroke=%27%2359dcff%27 stroke-width=%274%27/%3E%3Cpath d=%27m32 15 4.2 10.7 11.5.7-8.9 7.3 2.9 11.2-9.7-6.2-9.7 6.2 2.9-11.2-8.9-7.3 11.5-.7Z%27 fill=%27%23ffd166%27/%3E%3C/svg%3E"
     />
+    <title>文明：星火纪元 · 六边形RTS（拖拽视野版）</title>
+    <link rel="stylesheet" href="assets/styles.css" />
   </head>
   <body>
-    <p>
-      <a href="./civilization_rts_hex_drag_compact_audio_v3.html"
-        >进入文明：星火纪元</a
+    <div id="app">
+      <header class="top">
+        <div class="brand">
+          <div class="brandIcon">🌌</div>
+          <div>
+            <h1>文明：星火纪元</h1>
+            <p>Hexagonal real-time strategy</p>
+          </div>
+        </div>
+        <div class="resources">
+          <div class="res">
+            <i>🌾</i>
+            <div>
+              <b id="food">0</b
+              ><small>食物 <strong id="gFood">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>⚙️</i>
+            <div>
+              <b id="production">0</b
+              ><small>生产 <strong id="gProduction">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>🔬</i>
+            <div>
+              <b id="science">0</b
+              ><small>科研 <strong id="gScience">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>🪙</i>
+            <div>
+              <b id="gold">0</b
+              ><small>金币 <strong id="gGold">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>⚡</i>
+            <div>
+              <b id="energy">0</b
+              ><small>能量 <strong id="gEnergy">+0</strong>/脉冲</small>
+            </div>
+          </div>
+        </div>
+        <div class="topControls">
+          <button id="pause" class="btn">⏸ 暂停</button
+          ><label class="speed"
+            ><span>时间倍率</span
+            ><input
+              id="speed"
+              type="range"
+              min="0.1"
+              max="10"
+              step="0.1"
+              value="1"
+            /><b id="speedText">1.0×</b></label
+          ><button id="restart" class="btn">↻ 重新开始</button>
+        </div>
+      </header>
+      <div class="workspace">
+        <aside class="side left">
+          <div id="techScroll" class="scroll">
+            <div class="sectionTitle">
+              <h2>🧠 研发树</h2>
+              <small id="eraName">🏺 远古时代</small>
+            </div>
+            <div id="research" class="card"></div>
+            <div class="switchRow">
+              <div>
+                <b>🤖 AI 科研助理</b>
+                <p id="aiTechNote">资源允许时自动选择科技。</p>
+              </div>
+              <label class="toggle"
+                ><input id="aiTech" type="checkbox" checked /><span></span
+              ></label>
+            </div>
+            <div id="techTree"></div>
+          </div>
+        </aside>
+        <main id="mapArea">
+          <canvas id="game" tabindex="0"></canvas>
+          <div class="mapTop">
+            <div class="mission">
+              <b>🎯 战略目标：摧毁灰烬要塞</b
+              ><span
+                >右键规划完整路线；己方战斗单位会自动锁定三格内敌军并追击。</span
+              >
+            </div>
+            <div class="pulse">
+              <div class="pulseHead">
+                <b>⏱ 战略脉冲</b><strong id="pulseTime">1.0 秒</strong>
+              </div>
+              <div class="progress">
+                <div id="pulseFill" class="fill"></div>
+              </div>
+              <span id="clock">00:00 · 实时运行</span>
+            </div>
+          </div>
+          <div class="miniWrap">
+            <div class="miniLabel">战术雷达</div>
+            <canvas id="mini"></canvas>
+          </div>
+          <div id="tooltip" class="tooltip"></div>
+          <div id="toasts"></div>
+          <div class="mapBottom">
+            <div class="log">
+              <div class="logHead">
+                <span>文明纪事</span><span>最新动态</span>
+              </div>
+              <div id="logList" class="logList"></div>
+            </div>
+            <div class="help">
+              按住左键拖地图 · <span class="key">WASD</span>/<span class="key"
+                >↑↓←→</span
+              >
+              平移 · 滚轮缩放 · 右键移动/锁敌 ·
+              <span class="key">空格</span> 全局情报 ·
+              <span class="key">P</span> 暂停 ·
+              <span class="key">C</span> 清除一半敌军
+            </div>
+          </div>
+        </main>
+        <aside class="side right">
+          <div id="rightScroll" class="scroll">
+            <div class="sectionTitle">
+              <h2>📡 指挥面板</h2>
+              <small id="selKind">等待选择</small>
+            </div>
+            <div id="selection"></div>
+            <div id="global" class="card global"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <button
+      id="settingsGear"
+      class="settingsGear"
+      type="button"
+      aria-label="设置"
+      title="设置"
+    >
+      ⚙️
+    </button>
+    <button
+      id="helpGear"
+      class="helpGear"
+      type="button"
+      aria-label="帮助"
+      title="帮助（?）"
+    >
+      ?
+    </button>
+    <div id="settingsLayer" class="settingsLayer hidden">
+      <section
+        id="settingsPanel"
+        class="settingsPanel"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="settingsTitle"
       >
-    </p>
+        <div class="settingsPanelHead">
+          <h2 id="settingsTitle">设置</h2>
+          <button
+            id="settingsClose"
+            class="settingsClose"
+            type="button"
+            aria-label="关闭设置"
+          >
+            ×
+          </button>
+        </div>
+        <div id="gameSettings" class="settingsGroup">
+          <div class="settingsGroupHead">
+            <b>敌军 AI</b
+            ><span id="difficultyHint"
+              >中等：敌军拥有独立经济、科研、生产和扩张，会组织波次进攻。</span
+            >
+          </div>
+          <label class="settingLine"
+            ><span>难度</span
+            ><select id="difficultySelect" aria-label="敌军 AI 难度">
+              <option value="easy">🌱 简单</option>
+              <option value="medium" selected>⚔️ 中等</option>
+              <option value="hard">☠️ 困难</option>
+            </select></label
+          >
+          <div class="difficultyButtons">
+            <button class="difficultyBtn" data-difficulty="easy">
+              <b>🌱 简单</b
+              ><span>发展较慢、波次稀疏，不主动扩张。</span></button
+            ><button class="difficultyBtn active" data-difficulty="medium">
+              <b>⚔️ 中等</b
+              ><span>完整发展、第二城市、持续编队进攻。</span></button
+            ><button class="difficultyBtn" data-difficulty="hard">
+              <b>☠️ 困难</b
+              ><span>快速科技、三城扩张、精英军团与堡垒护盾。</span>
+            </button>
+          </div>
+        </div>
+        <div id="audioDock" class="settingsGroup audioDock" aria-live="polite">
+          <div class="audioSettingsHead">
+            <b>声音</b
+            ><span id="audioStatus" class="small muted">声音待启动</span>
+          </div>
+          <div class="audioDockControls">
+            <button id="audioDockToggle" type="button" aria-label="声音开关">
+              🔊</button
+            ><input
+              id="audioDockVolume"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="78"
+              aria-label="游戏音量"
+            /><output id="audioDockVolumeText">78%</output>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div id="helpLayer" class="helpLayer hidden">
+      <section
+        id="helpPanel"
+        class="helpPanel"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="helpTitle"
+      >
+        <div class="helpPanelHead">
+          <h2 id="helpTitle">怎么玩</h2>
+          <button
+            id="helpClose"
+            class="helpClose"
+            type="button"
+            aria-label="关闭帮助"
+          >
+            ×
+          </button>
+        </div>
+        <div class="helpScroll">
+          <section class="helpBlock">
+            <h3>一句话目标</h3>
+            <p>
+              这不是拖动小兵的游戏。你的目标是经营左侧的曙光文明，积累资源、研发科技、生产部队，最后把地图右侧的灰烬要塞打掉。游戏会实时运行：城市会自动产出资源，生产和科研会按秒推进，敌军也会发展、生产和进攻。你要做的是决定先研究什么、造什么、派谁去哪、什么时候进攻。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>开局按这个顺序做</h3>
+            <ol>
+              <li>
+                先看顶部五种资源：食物、生产、科研、金币、能量。绿色数字代表每次战略脉冲会增加多少。
+              </li>
+              <li>
+                点左侧研发树，优先点“灌溉网络”和“深层采矿”。这两个科技会解锁更多资源设施，是前期经济基础。
+              </li>
+              <li>
+                点右侧的曙光城，在“可生产项目”里先造一个工人，再造一两个近卫军或侦察兵。队列可以连续排多个项目。
+              </li>
+              <li>
+                选中工人，打开工人
+                AI，或者点一个有资源图标的地块，再点“派最近工人开发”。工人会过去建农场、矿山、实验站等设施。
+              </li>
+              <li>
+                等生产和科研推进时，可以把时间倍率调到 2x 到
+                5x。遇到敌军或需要精细操作时降回 1x 或暂停。
+              </li>
+              <li>
+                有几支作战单位后，选中单位，右键地图右侧推进。看到敌军或灰烬要塞时，右键敌人锁定攻击。
+              </li>
+              <li>
+                如果打不动，就继续研究工程、战术、电网、内燃机，生产更强单位，再组织第二波进攻。
+              </li>
+            </ol>
+          </section>
+          <section class="helpBlock">
+            <h3>鼠标到底怎么用</h3>
+            <p>
+              最容易误会的是单位移动。单位不能像桌面图标那样拖动。按住左键拖动地图，只是在拖动视野，不是在拖单位。真正的单位命令是“先选中，再右键”。
+            </p>
+            <ul>
+              <li>左键点单位、城市或地块：选中并查看右侧面板。</li>
+              <li>选中己方单位后右键空地：规划路线并移动。</li>
+              <li>选中己方作战单位后右键敌人：锁定目标并追击攻击。</li>
+              <li>选中工人后可开启工人 AI，或点资源地块派最近工人开发。</li>
+              <li>
+                右键命令会保留路线，单位会自己沿着虚线走到目的地，不需要每格都点。
+              </li>
+              <li>
+                如果选错了单位，可以点右侧“停止并解除锁定”，它会清掉路线和攻击目标。
+              </li>
+            </ul>
+          </section>
+          <section class="helpBlock">
+            <h3>资源怎么理解</h3>
+            <ul>
+              <li>食物：人口、开拓和部分单位。</li>
+              <li>生产：单位、建筑和设施的核心成本。</li>
+              <li>科研：解锁新科技、新单位和新时代。</li>
+              <li>金币：综合建设资源。</li>
+              <li>能量：高级单位、护盾、短时强化。</li>
+            </ul>
+            <p>
+              城市本身每个战略脉冲都会产出基础资源，所以你不操作也会慢慢增长。但真正拉开差距的是资源地块。地图上有小麦、铁矿、星晶、石油、古木、鱼群等资源，只有派工人建成对应设施后，它们才会加入每次脉冲收入。前期缺生产就开发铁矿和古木，缺科研就开发星晶，缺食物就开发小麦和鱼群。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>科研怎么选</h3>
+            <p>
+              左侧研发树决定你能造什么。开局建议先点“灌溉网络”和“深层采矿”，这样工人可以更有效地开发基础资源。之后点“模块化工程”，可以解锁开拓者、维修单位和重要建筑。再点“联合作战学”，解锁远程单位和混编加成。中期想打正面就走“内燃机与装甲”，解锁坦克；想做护盾和高级建筑就走“城市电网”；后期可以走“光棱共振”“反重力航空”“量子纠缠武器”。如果不想自己选，左侧有
+              AI 科研助理，它会在资源够时自动推进。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>城市和生产队列</h3>
+            <p>
+              右侧面板会显示当前选中的城市、单位或地块。选中曙光城时，下方会出现“可生产项目”。点一个项目，它会进入建造队列。队列里的项目按顺序完成，取消会返还资源。前期推荐顺序是：工人、近卫军、侦察兵，再根据科技补建筑或更高级单位。不要只造兵不发展经济，否则打完第一波后资源会跟不上；也不要只研究不造兵，否则敌军推进时没有防线。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>建设到底怎么点</h3>
+            <p>
+              游戏里有两种“建设”，不要混在一起。第一种是城市生产：选中城市后，在右侧“可生产项目”里点工人、近卫军、建筑，它们会进入城市建造队列。第二种是工人建设：选中工人或资源地块，让工人去地图上建资源设施。城市生产发生在城市队列里；工人建设发生在地图地块上。
+            </p>
+            <ol>
+              <li>
+                造单位或城市建筑：左键点主城“曙光城”，右侧面板会出现“可生产项目”。直接点“工人”“近卫军”“侦察兵”等按钮。点完后项目会出现在“建造队列”，时间到了自动完成。
+              </li>
+              <li>
+                造资源设施：左键点地图上带资源图标的地块，例如小麦、铁矿、星晶、石油、古木。右侧会出现地块详情。如果地块可开发，会有“派最近工人开发”按钮。点它，最近的空闲工人会自动走过去建设。
+              </li>
+              <li>
+                手动让工人原地建设：左键点工人，再把工人移动到目标地块上。工人到达后，右侧单位面板会有“建设当前地块”。这个按钮只在当前地块能建东西时才有意义。
+              </li>
+              <li>
+                自动建设：左键点工人，右侧打开“工人 AI
+                模式”。现在整行都能点。开启后工人会自己找附近可开发地块，不需要你一个个派。
+              </li>
+            </ol>
+            <p>
+              建不了通常有四个原因：科技没解锁、资源不够、地块已经有设施、这个地形不能建。主城中心不能叠加采集设施；城市中心也不能再造农场矿山。按钮变灰时，先看按钮下面的小字，它会写“需要某科技”“资源不足”“已拥有/已排队”之类的原因。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>工人怎么用</h3>
+            <p>
+              工人是经济发展的关键。选中工人后，右侧可以打开“工人 AI
+              模式”。现在整行都可以点，不必点很小的开关。打开后，工人会自动找附近合适资源并建设。你也可以手动点一个资源地块，再点“派最近工人开发”。每个工人有建设次数，次数用完会退役。工人还会维修附近受伤单位、城市和设施，所以别把所有工人都送到危险前线。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>战斗怎么打</h3>
+            <ul>
+              <li>己方战斗单位会自动攻击三格内敌人。</li>
+              <li>手动右键敌人可以持续锁定，不会只走一步。</li>
+              <li>短时强化会消耗 25 能量，8 秒内提升火力和移动。</li>
+              <li>停止并解除锁定会清空路线和当前攻击目标。</li>
+              <li>驻守当前格会让单位站住，不再主动追击敌人。</li>
+            </ul>
+            <p>
+              近卫军适合在前排扛伤害，弓手和坦克适合在后排输出。不同职责的单位靠近会有兵种配合加成。光棱坦克靠近其他光棱坦克会组网，数量越多爆发越强。基洛夫飞艇可以无视地形，但速度慢，适合配合地面部队推进。遇到敌方城市或资源设施时，先选中你的作战单位，再右键目标；单位会持续追到射程内攻击。不要把单个单位孤零零送进敌方核心区域，最好至少两三支单位一起推进。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>推荐第一局路线</h3>
+            <ol>
+              <li>难度选简单或中等。</li>
+              <li>左键点曙光城，在右侧“可生产项目”里点“工人”。</li>
+              <li>
+                工人完成后左键点工人，点右侧“工人 AI
+                模式”整行，让它自动建设资源设施。
+              </li>
+              <li>左侧研发树点“灌溉网络”和“深层采矿”。</li>
+              <li>
+                回到曙光城，在“可生产项目”里造两个近卫军或侦察兵，保护主城附近。
+              </li>
+              <li>研究模块化工程和联合作战学。</li>
+              <li>补弓手、骑士或维修蜂群。</li>
+              <li>资源稳定后研究内燃机或城市电网。</li>
+              <li>用坦克、光棱坦克或基洛夫飞艇组成主力，向右侧推进。</li>
+              <li>看到灰烬要塞后，选中主力单位右键要塞，集中火力摧毁。</li>
+            </ol>
+          </section>
+          <section class="helpBlock">
+            <h3>快捷键</h3>
+            <div class="shortcutGrid">
+              <span>WASD / 方向键</span><b>移动视野</b> <span>鼠标滚轮</span
+              ><b>缩放地图</b> <span>空格</span><b>按住显示单位名称和血条</b>
+              <span>P</span><b>暂停 / 继续</b> <span>F1</span
+              ><b>打开新手教程</b> <span>?</span><b>打开这个帮助</b>
+              <span>C</span><b>清除一半敌军</b>
+            </div>
+          </section>
+          <section class="helpBlock">
+            <h3>看不懂按钮时</h3>
+            <p>
+              先看右侧面板标题和按钮所在分组：单位命令只影响当前选中的单位；地块操作只影响当前地块；城市生产会进入当前城市队列。按钮上的资源图标就是成本，例如
+              ⚡25 表示要花 25 点能量。“短时强化”就是花 25
+              能量让当前作战单位临时变强；“驻守当前格”就是让它不要主动追敌。按钮变灰通常代表科技未解锁、资源不足、队列满了，或当前对象不能执行这个命令。左下角齿轮是设置，左下角问号是帮助；按键盘上的
+              ? 可以随时打开这份说明。
+            </p>
+          </section>
+        </div>
+      </section>
+    </div>
+    <div id="intro" class="modal">
+      <div class="modalCard">
+        <div class="kicker">Real-time civilization prototype</div>
+        <h2>在几秒内跨越千年</h2>
+        <p>
+          资源、生产、科研、寻路和战斗都由同一套实时模拟钟驱动，速度滑块从 0.1×
+          到 10× 真正改变整个世界。
+        </p>
+        <div class="features">
+          <div class="feature">
+            <b>⬡ 六边形 RTS</b
+            ><span
+              >右键一次规划完整路线，虚线保留到抵达；按住左键拖地图，也可用
+              WASD/方向键平移。</span
+            >
+          </div>
+          <div class="feature">
+            <b>🤖 三层 AI</b
+            ><span
+              >你的科研与工人可托管；敌军也会采集、科研、建城、生产并组织进攻。</span
+            >
+          </div>
+          <div class="feature">
+            <b>🔷 光棱组网</b
+            ><span>三格内链式储能，两辆起攻击翻倍并绘制棱镜光束。</span>
+          </div>
+          <div class="feature">
+            <b>🎈 基洛夫空艇</b
+            ><span>无视地形，范围爆破，战斗全过程带粒子与浮动伤害。</span>
+          </div>
+          <div class="feature">
+            <b>✨ 星火遗迹</b
+            ><span>探索可获得随机资源或直接推进当前科研。</span>
+          </div>
+          <div class="feature">
+            <b>⚡ 短时强化</b
+            ><span>消耗能量临时提升火力与机动，可配合多兵种推进。</span>
+          </div>
+        </div>
+        <div class="modalActions dual">
+          <button id="start" class="modalBtn secondary">直接开始游戏</button
+          ><button id="startTutorial" class="modalBtn">🎓 进入新手教程</button>
+        </div>
+        <p class="introHint">
+          不熟悉玩法时推荐教程。进入游戏后也可点击地图左上角的
+          <b>❔ 新手教程</b> 随时重看，也可以按 <span class="key">F1</span>。
+        </p>
+      </div>
+    </div>
+    <div id="tutorial" class="tutorialLayer hidden" aria-live="polite">
+      <div id="tutorialSpotlight" class="tutorialSpotlight center"></div>
+      <section
+        id="tutorialCard"
+        class="tutorialCard"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tutorialTitle"
+      >
+        <div class="tutorialTop">
+          <span id="tutorialStepLabel" class="tutorialProgressLabel"
+            >新手教程 1 / 11</span
+          ><span class="tutorialSafe">🛡️ 引导期间敌军停火</span>
+        </div>
+        <div class="tutorialProgress">
+          <i id="tutorialProgressBar" style="width: 10%"></i>
+        </div>
+        <div class="tutorialHeading">
+          <div id="tutorialIcon" class="tutorialIcon">🎓</div>
+          <div>
+            <h2 id="tutorialTitle">欢迎来到星火纪元</h2>
+            <p id="tutorialSubtitle">
+              跟着高亮区域，约几分钟即可掌握核心循环。
+            </p>
+          </div>
+        </div>
+        <div id="tutorialBody" class="tutorialBody"></div>
+        <div id="tutorialTask" class="tutorialTask hidden">
+          <div id="tutorialTaskIcon" class="tutorialTaskIcon">○</div>
+          <div>
+            <b>动手试试（可跳过）</b>
+            <p id="tutorialTaskText"></p>
+          </div>
+        </div>
+        <div id="tutorialTip" class="tutorialTip"></div>
+        <div class="tutorialActions">
+          <button id="tutorialSkip" class="tutorialAction skip">跳过教程</button
+          ><button id="tutorialDemo" class="tutorialAction demo">
+            ▶ 自动演示</button
+          ><button id="tutorialPrev" class="tutorialAction">上一步</button
+          ><button id="tutorialNext" class="tutorialAction next">下一步</button>
+        </div>
+      </section>
+    </div>
+    <div id="end" class="modal hidden">
+      <div
+        class="modalCard"
+        style="width: min(560px, 96vw); text-align: center"
+      >
+        <div id="endKicker" class="kicker">Campaign resolved</div>
+        <h2 id="endTitle">文明胜利</h2>
+        <p id="endText"></p>
+        <div
+          class="modalActions"
+          style="justify-content: center; margin-top: 18px"
+        >
+          <button id="endRestart" class="modalBtn">重新开始文明</button>
+        </div>
+      </div>
+    </div>
+    <script src="assets/js/01-world-data.js"></script>
+    <script src="assets/js/02-simulation.js"></script>
+    <script src="assets/js/03-interface-tutorial.js"></script>
+    <script src="assets/js/04-rendering.js"></script>
+    <script src="assets/js/05-bootstrap.js"></script>
+    <script src="assets/js/06-enhancements.js"></script>
+    <script src="assets/js/07-map-interactions.js"></script>
   </body>
 </html>

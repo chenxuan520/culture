@@ -244,8 +244,7 @@ function allTargetsFor(team){
   return out;
 }
 function autoAcquire(unit){
-  if(unit.team==='player'&&unit.holdPosition)return;
-  const range=unit.team==='player'?3:7,targets=allTargetsFor(unit.team).filter(t=>{
+  const baseRange=unit.team==='player'?3:7,holdRange=unit.def?.range||1,range=unit.team==='player'&&unit.holdPosition?holdRange:baseRange,targets=allTargetsFor(unit.team).filter(t=>{
     const d=hexDistance(unit,t);if(d>range)return false;if(unit.team==='player'&&t.kind==='city'&&allTargetsFor(unit.team).some(x=>x.kind==='unit'&&hexDistance(unit,x)<=3))return false;return true;
   });
   targets.sort((a,b)=>hexDistance(unit,a)-hexDistance(unit,b)||(a.kind==='unit'?-1:1));
@@ -354,6 +353,7 @@ function updateCombatUnit(unit,dt){
     if(unit.beamTick<=0){unit.beamTick=.11;const a=unitDrawPos(unit),b=targetPosition(target);if(unit.type==='prism')beamEffect(a,b,'rgba(113,215,255,.45)',.12,1);else if(unit.def.range>1)state.effects.push({type:'spark',x:lerp(a.x,b.x,Math.random()),y:lerp(a.y,b.y,Math.random()),color:unit.team==='player'?'#ffd166':'#ff6d7e',life:.16,max:.16});}
     while(unit.attackTimer>=interval&&unit.hp>0&&resolveTarget(unit.target)){unit.attackTimer-=interval;performAttack(unit,resolveTarget(unit.target));}
   }else{
+    if(unit.team==='player'&&unit.holdPosition){unit.target=null;unit.route=[];return;}
     unit.attackTimer=Math.min(unit.attackTimer,interval*.65);unit.repathTimer=(unit.repathTimer||0)-dt;
     if(unit.repathTimer<=0||!unit.route.length){unit.repathTimer=unit.team==='player'?.32:.65;setUnitRoute(unit,target.q,target.r,false);}
   }
