@@ -36,7 +36,7 @@ function renderUnitSelection(u){
   if(u.team==='player'){
     if(u.type==='worker')html+=`<div class="switchRow" data-worker-ai-row><div><b>🤖 工人 AI 模式</b><p>自动寻找附近未开发资源，并按地形连续建设。</p></div><label class="toggle"><input type="checkbox" data-worker-ai ${u.aiWorker?'checked':''}><span></span></label></div>`;
     html+=`<div class="sub">单位命令 <span>右键地图规划路线</span></div><div class="actions">`;
-    if(u.type==='worker')html+=`<button class="action" data-action="build-here">🏗️ 建设当前地块</button>`;
+    if(u.type==='worker'){const here=tileAt(u.q,u.r),check=canImproveTile(here);html+=`<button class="action ${check.ok?'good':''}" data-action="build-here" ${check.ok?'':'disabled'}>${check.ok?`🏗️ 建设${IMPROVEMENTS[check.type].name}`:`🏗️ ${check.reason}`}</button>`;}
     if(u.type==='settler')html+=`<button class="action good full" data-action="found-city">🏠 在当前地块建立城市</button>`;
     if(u.def.combat)html+=`<button class="action warn" data-action="overdrive">⚡ 短时强化（消耗25能量）</button>`;
     if(u.def.combat)html+=`<button class="action" data-action="toggle-hold">${u.holdPosition?'🟢 恢复自动索敌':'🛡️ 驻守当前格'}</button>`;
