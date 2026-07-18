@@ -81,4 +81,6 @@
     window.__STARFIRE_DEBUG__.camera=()=>({...state.camera});
     window.__STARFIRE_DEBUG__.dragState=()=>({active:dragState.pointerId!==null,suppressUntil:dragState.suppressUntil});
   }
+  window.toggleSettingsPanel=toggleSettings;
+  window.toggleHelpPanel=toggleHelp;
 })();

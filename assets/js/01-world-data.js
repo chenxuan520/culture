@@ -33,7 +33,7 @@ const IMPROVEMENTS = {
   solar:{name:'日冕电站',icon:'☀️',duration:1.4,hp:105,yield:{energy:4,gold:1},desc:'沙漠地块上的高效能源设施。'},
   lab:{name:'星晶实验站',icon:'🧪',duration:1.55,hp:110,yield:{science:4,energy:1},desc:'对星晶进行科研转化。'},
   extractor:{name:'深层萃取井',icon:'🏭',duration:1.45,hp:130,yield:{production:2,energy:3},desc:'开采石油并转化为生产与能量。'},
-  harbor:{name:'潮汐渔港',icon:'⚓',duration:1.35,hp:120,yield:{food:3,gold:2},desc:'水域资源设施，仅工人 AI 可在岸边部署。'}
+  harbor:{name:'潮汐渔港',icon:'⚓',duration:1.35,hp:120,yield:{food:3,gold:2},desc:'预留水域设施；当前版本陆地工人不能建设。'}
 };
 const ERAS = [
   {name:'远古时代',icon:'🏺'}, {name:'古典时代',icon:'🏛️'}, {name:'工业时代',icon:'🏭'},
@@ -115,10 +115,9 @@ function generateMap(){
   for(const [q,r] of safe){const t=map.get(key(q,r));if(t&&(t.terrain==='water'||t.terrain==='mountain'))t.terrain=rnd()<.35?'forest':'plains';}
   for(const p of [[3,7],[16,7],[4,7],[15,7],[3,6],[3,8],[16,6],[16,8]]){const t=map.get(key(...p));if(t)t.terrain='plains';}
   for(const t of map.values()){
-    if(t.terrain==='mountain')continue;
+    if(t.terrain==='mountain'||t.terrain==='water')continue;
     const rv=rnd();
-    if(t.terrain==='water'&&rv<.32)t.resource='fish';
-    else if(t.terrain==='forest'&&rv<.34)t.resource='timber';
+    if(t.terrain==='forest'&&rv<.34)t.resource='timber';
     else if(t.terrain==='hills'&&rv<.30)t.resource=rv<.15?'iron':'crystal';
     else if(t.terrain==='desert'&&rv<.25)t.resource=rv<.12?'oil':'crystal';
     else if((t.terrain==='grass'||t.terrain==='plains')&&rv<.23)t.resource='wheat';

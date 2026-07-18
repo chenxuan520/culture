@@ -36,7 +36,7 @@ function renderUnitSelection(u){
   if(u.team==='player'){
     if(u.type==='worker')html+=`<div class="switchRow" data-worker-ai-row><div><b>🤖 工人 AI 模式</b><p>自动寻找附近未开发资源，并按地形连续建设。</p></div><label class="toggle"><input type="checkbox" data-worker-ai ${u.aiWorker?'checked':''}><span></span></label></div>`;
     html+=`<div class="sub">单位命令 <span>右键地图规划路线</span></div><div class="actions">`;
-    if(u.type==='worker'){const here=tileAt(u.q,u.r),check=canImproveTile(here);html+=`<button class="action ${check.ok?'good':''}" data-action="build-here" ${check.ok?'':'disabled'}>${check.ok?`🏗️ 建设${IMPROVEMENTS[check.type].name}`:`🏗️ ${check.reason}`}</button>`;}
+    if(u.type==='worker'){const here=tileAt(u.q,u.r),check=canImproveTile(here);html+=`<button class="action ${check.ok?'good':'blocked'}" data-action="build-here" ${check.ok?'':`data-blocked="${check.reason}" aria-disabled="true"`}>${check.ok?`🏗️ 建设${IMPROVEMENTS[check.type].name}`:`🏗️ 不能建设：${check.reason}`}</button>`;}
     if(u.type==='settler')html+=`<button class="action good full" data-action="found-city">🏠 在当前地块建立城市</button>`;
     if(u.def.combat)html+=`<button class="action warn" data-action="overdrive">⚡ 短时强化（消耗25能量）</button>`;
     if(u.def.combat)html+=`<button class="action" data-action="toggle-hold">${u.holdPosition?'🟢 恢复自动索敌':'🛡️ 驻守当前格'}</button>`;
@@ -73,7 +73,7 @@ function renderTileSelection(t){
   if(res&&!imp)html+=`<p class="desc">潜在产出：${yieldText(res.yield)}。当前还没有设施，所以这些数字尚未加入资源收入。</p>`;
   if(imp)html+=`<p class="desc">设施已建成：当前地块每次资源脉冲实际贡献 ${yieldText(y)}。顶部资源卡的绿色数字已经包含这部分收入。</p>`;
   html+=`<div class="sub">地块操作 <span>${check.ok?`建议：${IMPROVEMENTS[check.type].name}`:check.reason}</span></div><div class="actions">`;
-  if(!t.improvement&&!city)html+=`<button class="action good full" data-action="dispatch-worker" ${check.ok?'':'disabled'}>👷 派最近工人开发</button>`;
+  if(!t.improvement&&!city){const blockedReason=workerJob?'已经有工人在处理这个地块':check.reason,canDispatch=check.ok&&!workerJob;html+=`<button class="action ${canDispatch?'good':'blocked'} full" data-action="dispatch-worker" ${canDispatch?'':`data-blocked="${blockedReason}" aria-disabled="true"`}>👷 派最近工人开发</button>`;}
   if(t.improvement)html+=`<button class="action danger" data-action="destroy-improvement">💥 手工拆除设施</button>`;
   if(t.resource)html+=`<button class="action danger" data-action="destroy-resource">🗑️ 摧毁战略资源</button>`;
   html+=`<button class="action" data-action="center-selection">🎯 镜头居中</button></div></div>`;return html;
@@ -95,8 +95,9 @@ function centerOn(q,r){const p=axialToWorld(q,r);state.camera.x=p.x;state.camera
 function stopUnit(u){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;if(u.type==='worker')u.work=null;toast(`${u.def.name} 已停止当前命令。`);renderPanels();}
 function toggleHoldPosition(u){if(!u?.def?.combat||u.team!=='player')return;u.holdPosition=!u.holdPosition;if(u.holdPosition){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;toast(`${u.def.name} 将驻守当前格，不再主动追击。`,'good');}else toast(`${u.def.name} 恢复自动索敌。`,'good');renderPanels();}
 function dispatchNearestWorker(tile){
-  const workers=state.units.filter(u=>u.team==='player'&&u.type==='worker'&&u.charges>0).sort((a,b)=>hexDistance(a,tile)-hexDistance(b,tile));
-  for(const u of workers)if(assignWorkerBuild(u,tile,true)){state.selection={kind:'unit',id:u.id};renderPanels();return;}toast('没有可用工人或不存在可通行路线。','warn');
+  const workers=state.units.filter(u=>u.team==='player'&&u.type==='worker'&&u.charges>0&&!u.work).sort((a,b)=>hexDistance(a,tile)-hexDistance(b,tile));
+  for(const u of workers)if(assignWorkerBuild(u,tile,true)){state.selection={kind:'unit',id:u.id};renderPanels();return;}
+  toast(workers.length?'没有工人能走到这个地块。':'没有空闲且有建设次数的工人。','warn');
 }
 function demolishImprovement(tile){if(!tile.improvement)return;const n=IMPROVEMENTS[tile.improvement.type].name;tile.improvement=null;toast(`已手工拆除 ${n}。`,'warn');addLog(`💥 玩家拆除了 ${n}。`,'warn');renderPanels();}
 function destroyResource(tile){if(!tile.resource)return;const n=RESOURCE_DEFS[tile.resource].name;tile.resource=null;toast(`战略资源「${n}」已被永久摧毁。`,'danger');addLog(`🗑️ 玩家永久清除了 ${n}。`,'danger');renderPanels();}
@@ -111,7 +112,7 @@ $('selection').addEventListener('click',e=>{
   const workerRow=e.target.closest('[data-worker-ai-row]');if(workerRow&&!e.target.closest('.toggle')){const input=workerRow.querySelector('[data-worker-ai]');if(input){input.checked=!input.checked;input.dispatchEvent(new Event('change',{bubbles:true}));}return;}
   const product=e.target.closest('[data-product]');if(product){const c=selectedObject();if(c)queueProduct(c,product.dataset.product);return;}
   const cancel=e.target.closest('[data-cancel]');if(cancel){const c=selectedObject();if(c)cancelQueue(c,cancel.dataset.cancel);return;}
-  const action=e.target.closest('[data-action]');if(!action)return;const obj=selectedObject(),a=action.dataset.action;
+  const action=e.target.closest('[data-action]');if(!action)return;if(action.dataset.blocked){toast(action.dataset.blocked,'warn');return;}const obj=selectedObject(),a=action.dataset.action;
   if(a==='toggle-worker-ai'&&obj?.type==='worker'){obj.aiWorker=!obj.aiWorker;if(obj.aiWorker&&!obj.work)chooseWorkerTask(obj);toast(obj.aiWorker?'🤖 工人 AI 已开启。':'工人 AI 已关闭。');renderPanels();}
   else if(a==='build-here'&&obj?.type==='worker')assignWorkerBuild(obj,tileAt(obj.q,obj.r),true);
   else if(a==='found-city'&&obj?.type==='settler')foundCity(obj);
@@ -129,15 +130,15 @@ $('selection').addEventListener('click',e=>{
 const tutorial={active:false,step:0,fromIntro:false,flags:{},checkTimer:0};
 const TUTORIAL_STEPS=[
   {icon:'🎓',title:'欢迎来到星火纪元',subtitle:'先记住一个核心循环，其他系统会自然串起来。',target:null,place:'center',body:`你的目标是发展文明，并最终摧毁地图右侧的 <em>灰烬要塞</em>。玩法核心只有五步：<div class="loop"><span>🏠 城市产资源</span><span>🔬 研发科技</span><span>🏭 排队生产</span><span>🧭 指挥单位</span><span>⚔️ 摧毁要塞</span></div><br>教程期间会开启 <b>新手停火保护</b>：敌军不会推进或增援，但你的资源、建造、科研和移动仍照常运行。`,tip:'所有练习都可以跳过；教程结束后敌军才恢复行动。'},
-  {icon:'🌾',title:'资源与战略脉冲',subtitle:'拥有城市，就会持续获得基础收入。',target:'.resources',place:'below',body:`顶部五种资源分别是：<b>食物</b>用于人口与开拓，<b>生产</b>用于单位和建筑，<b>科研</b>用于科技，<b>金币</b>用于综合建设，<b>能量</b>用于高级单位与超载。<br><br>每经过 <em>1 个模拟秒</em>，城市和已开发设施会结算一次产出；资源卡下方的绿色数字就是每次脉冲的增加量。`,tip:'城市本身会自然产出资源，所以即使暂时不操作，文明也会成长。'},
+  {icon:'🌾',title:'资源与战略脉冲',subtitle:'拥有城市，就会持续获得基础收入。',target:'.resources',place:'below',body:`顶部五种资源分别是：<b>食物</b>用于人口与开拓，<b>生产</b>用于单位和建筑，<b>科研</b>用于科技，<b>金币</b>用于综合建设，<b>能量</b>用于高级单位、护盾和短时强化。<br><br>每经过 <em>1 个模拟秒</em>，城市和已开发设施会结算一次产出；资源卡下方的绿色数字就是每次脉冲的增加量。`,tip:'城市本身会自然产出资源，所以即使暂时不操作，文明也会成长。'},
   {icon:'🏠',title:'管理城市与建造队列',subtitle:'主城是你生产军队和特殊建筑的核心。',target:'#selection',place:'left',select:'city',task:'在右侧“可生产项目”中点击任意单位或建筑，把它加入建造队列。',check:'queue',body:`我已经替你选中了主城 <b>曙光城</b>。右侧面板上方显示生命、人口和产出；中间是 <em>建造队列</em>；下方是可生产项目。<br><br>你可以连续加入多个项目，它们会按顺序在几秒内完成。点击队列项目右侧的“取消”，会 <b>全额退回资源</b>。`,tip:'前期推荐先造一个作战单位或工人。主城所在格不能再叠加采集设施。'},
   {icon:'🧠',title:'研发树与 AI 助理',subtitle:'科技会解锁兵种、建筑和新的时代。',target:'#techScroll',place:'right',select:'tech',task:'点击一项可用科技开始研发，或者勾选“AI 科研助理”让它自动选择。',check:'research',body:`左侧是完整研发树。发亮且资源足够的科技可以手动点击；每项科技都有前置条件和数秒研发时间。<br><br>不想逐项管理时，勾选 <b>🤖 AI 科研助理</b>，它会在科研资源允许时自动推进整棵科技树。`,tip:'教程开局默认暂时关闭科研 AI，方便你看清选择过程；直接开始游戏时仍默认开启。'},
   {icon:'🧭',title:'选择单位并规划路线',subtitle:'单位不是拖动操作，先选中再下命令。',target:'#game',place:'inside-right',select:'warrior',task:'左键确认选中近卫军，再在地图远处的可通行地块点一次右键，看到持续显示的虚线路线。',check:'route',body:`我已经选中并居中了你的近卫军。地图上 <b>左键</b>选择城市、单位或资源地块；选中己方单位后，在远处空地 <em>右键</em>，系统会用六边形寻路规划完整路线。<br><br><b>按住左键拖动是拖视野，不是拖单位。</b> 单位会按固定时钟周期逐格前进，虚线会一直保留到抵达目的地。`,tip:'水域和山脉通常不可通行；基洛夫飞艇等飞行单位可以无视地形。'},
-  {icon:'🎯',title:'锁敌、追击与驻守',subtitle:'战斗单位可自动作战，也可以固定守一个格子。',target:'.mission',place:'below',select:'warrior',body:`己方战斗单位周围 <em>3 格</em>内出现敌人时，默认会自动锁定并攻击。你也可以先选中己方作战单位，再对敌军 <b>右键</b>：单位会显示 🎯 标记，持续追赶，并在合适射程停下开火。<br><br>如果你想让部队站在当前格子不要主动追击，点右侧 <b>驻守当前格</b>。驻守后单位不会主动索敌；你手动右键移动或右键敌人时，会自动取消驻守。`,tip:'多个不同职责的兵种靠近会有兵种配合加成；多辆光棱坦克靠近会获得组网加成。'},
+  {icon:'🎯',title:'锁敌、追击与驻守',subtitle:'战斗单位可自动作战，也可以固定守一个格子。',target:'.mission',place:'below',select:'warrior',body:`己方战斗单位周围 <em>3 格</em>内出现敌人时，默认会自动锁定并攻击。你也可以先选中己方作战单位，再对敌军 <b>右键</b>：单位会显示 🎯 标记，持续追赶，并在合适射程停下开火。<br><br>如果你想让部队站在当前格子不要主动追击，点右侧 <b>驻守当前格</b>。驻守后单位仍会攻击自己射程内的敌人，但不会追出当前格；你手动右键移动或右键敌人时，会自动取消驻守。`,tip:'多个不同职责的兵种靠近会有兵种配合加成；多辆光棱坦克靠近会获得组网加成。'},
   {icon:'👷',title:'工人 AI 与资源开发',subtitle:'工人会因地制宜自动建设，最多完成五项工程。',target:'#selection',place:'left',select:'worker',task:'在右侧面板勾选“工人 AI 模式”。',check:'workerAI',body:`我已经选中了工人。开启右侧的 <b>工人 AI 模式</b>后，它会自动寻找附近未开发资源，并按地形建设农场、矿山、实验站、萃取井或永续伐木场。<br><br>每名工人有 <em>5 次建设次数</em>，完成第五项工程后退役。工人靠近受伤的友军、城市或设施时还会自动维修。`,tip:'也可以直接点击一个资源地块，再使用“派最近工人开发”进行手动指派。'},
   {icon:'⏱️',title:'时间倍率与暂停',subtitle:'这里控制的是整个模拟世界，而不只是动画速度。',target:'.topControls',place:'below',task:'拖动倍率滑块，或者点击暂停/继续按钮试一次。',check:'speed',body:`顶部滑块可从 <b>0.1×</b> 调到 <b>10×</b>。它会同时影响资源脉冲、生产、科研、移动、维修和战斗。<br><br>点击“暂停”或按 <span class="key">P</span> 可以冻结模拟；暂停时仍可查看面板、选择单位和预先下达路线。`,tip:'需要精细指挥时用 0.5×—1×；等待生产和科研时可升到 5×—10×。'},
   {icon:'🗺️',title:'视野、缩放与快捷键',subtitle:'地图不会在鼠标碰到边缘时自动滚动。',target:'.mapBottom',place:'above',task:'按住左键拖动地图、按 WASD 或方向键移动视野，或按住空格查看全军名称与血条。',check:'view',body:`在地图空白处或单位上 <b>按住左键拖动</b>可以平移视野；也可使用 <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> 或 <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> 平移。鼠标滚轮以指针位置为中心缩放；点击右下角战术雷达可快速跳转。<div class="keys"><span class="key">空格</span> 按住显示所有单位名称和血条 <span class="key">P</span> 暂停/继续 <span class="key">F1</span> 打开教程 <span class="key">C</span> 随机清除一半敌军</div>`,tip:'C 是本原型保留的强力战略指令，适合想快速体验后期科技和创意兵种时使用。'},
-  {icon:'🌌',title:'准备建立你的文明',subtitle:'教程结束，新手停火保护即将解除。',target:'.mission',place:'below',body:`现在你已经掌握完整流程：<b>看资源 → 选科技 → 城市排队 → 工人开发 → 单位寻路 → 锁敌作战</b>。<br><br>最终目标是摧毁 <em>灰烬要塞</em>。推荐路线：先发展生产与科研，再解锁主战坦克、光棱坦克或基洛夫飞艇，组成混编部队向地图右侧推进。`,tip:'完成教程会获得一次性新手补给。之后仍可点击地图左上角“❔ 新手教程”重新查看，但不会重复领取奖励。'}
+  {icon:'🌌',title:'准备建立你的文明',subtitle:'教程结束，新手停火保护即将解除。',target:'.mission',place:'below',body:`现在你已经掌握完整流程：<b>看资源 → 选科技 → 城市排队 → 工人开发 → 单位寻路 → 锁敌作战</b>。<br><br>最终目标是摧毁 <em>灰烬要塞</em>。推荐路线：先发展生产与科研，再解锁主战坦克、光棱坦克或基洛夫飞艇，组成兵种配合部队向地图右侧推进。`,tip:'完成教程会获得一次性新手补给。之后可按 F1 重新查看教程，或按 ? 打开详细帮助。'}
 ];
 function tutorialSelected(type){
   if(type==='city')return state.cities.find(c=>c.team==='player'&&c.capital&&c.hp>0);

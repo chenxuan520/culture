@@ -29,7 +29,12 @@ canvas.addEventListener('contextmenu',e=>{
   e.preventDefault();const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,hit=hitTest(x,y),u=state.selection?.kind==='unit'?unitById(state.selection.id):null;
   if(!u||u.team!=='player'){toast('请先选择一个己方单位。','warn');return;}
   if(hit&&(hit.kind==='unit'||hit.kind==='city')&&hit.obj.team==='enemy'){
+    if(!u.def.combat){toast('这个单位不能攻击；请选择近卫军、侦察兵、弓手、坦克等作战单位。','warn');return;}
     setLockedTarget(u,{kind:hit.kind,obj:hit.obj,q:hit.obj.q,r:hit.obj.r,team:'enemy'},true);renderPanels();return;
+  }
+  if(hit?.kind==='improvement'&&hit.obj.improvement?.team==='enemy'){
+    if(!u.def.combat){toast('这个单位不能攻击设施；请选择作战单位。','warn');return;}
+    setLockedTarget(u,{kind:'improvement',obj:hit.obj.improvement,tile:hit.obj,q:hit.obj.q,r:hit.obj.r,team:'enemy'},true);renderPanels();return;
   }
   const t=screenToTile(x,y);if(!t)return;u.target=null;u.manualTarget=false;if(u.type==='worker')u.work=null;setUnitRoute(u,t.q,t.r,true);renderPanels();
 });

@@ -168,9 +168,11 @@ function canImproveTile(tile){
   if(tile.terrain==='water')return{ok:false,reason:'工人无法进入水域'};const tech=improvementTech(type);if(!hasTech(tech))return{ok:false,reason:`需要科技：${techById(tech)?.name||tech}`};return{ok:true,type};
 }
 function assignWorkerBuild(unit,tile,manual=false){
-  if(unit.type!=='worker'||unit.team!=='player'||unit.charges<=0)return false;const check=canImproveTile(tile);if(!check.ok){if(manual)toast(check.reason,'warn');return false;}
-  const reserved=state.units.some(u=>u.id!==unit.id&&u.work&&u.work.q===tile.q&&u.work.r===tile.r);if(reserved)return false;
-  const path=findPath(unit,{q:unit.q,r:unit.r},tile);if(!path.length&&!(unit.q===tile.q&&unit.r===tile.r))return false;
+  if(unit.type!=='worker'||unit.team!=='player')return false;
+  if(unit.charges<=0){if(manual)toast('这个工人的建设次数已经用完。','warn');return false;}
+  const check=canImproveTile(tile);if(!check.ok){if(manual)toast(check.reason,'warn');return false;}
+  const reserved=state.units.some(u=>u.id!==unit.id&&u.work&&u.work.q===tile.q&&u.work.r===tile.r);if(reserved){if(manual)toast('已经有工人在处理这个地块。','warn');return false;}
+  const path=findPath(unit,{q:unit.q,r:unit.r},tile);if(!path.length&&!(unit.q===tile.q&&unit.r===tile.r)){if(manual)toast('工人找不到去这个地块的可通行路线。','warn');return false;}
   unit.work={q:tile.q,r:tile.r,type:check.type,progress:0,time:IMPROVEMENTS[check.type].duration,building:false};unit.route=path;unit.moveProgress=0;
   if(manual){toast(`${IMPROVEMENTS[check.type].icon} 工人开始前往建设 ${IMPROVEMENTS[check.type].name}`);addLog(`👷 已派工人建设 ${IMPROVEMENTS[check.type].name}。`);}return true;
 }

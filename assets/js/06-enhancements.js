@@ -313,6 +313,8 @@
   TUTORIAL_STEPS.splice(TUTORIAL_STEPS.length-1,0,{icon:'🔊',title:'声音与敌军 AI 难度',subtitle:'敌军会真实发展，而不是只按计时器刷兵。',target:'#gameSettings',place:'left',task:'调整一次音量、静音开关或敌军 AI 难度。',check:'settings',body:`右侧“游戏设置”可以随时调整 <b>合成音乐与音效</b>，所有声音都由浏览器实时生成，不需要联网下载素材。<br><br>敌军难度有三档：<em>简单</em>发展较慢；<em>中等</em>会建第二城市并持续进攻；<em>困难</em>会快速科研、三城扩张、生产精英军团、使用堡垒护盾并在濒死时总动员。下方“灰烬 AI 情报”会直接显示它的资源、科技、城市、设施、队列与下一波计划。`,tip:'难度可以在游戏中即时切换；困难模式的目标是让成熟阵容也必须认真经营和协同作战。'});
   tutorialTaskDone=function(step=TUTORIAL_STEPS[tutorial.step]){if(step?.check==='settings'){const done=!!tutorial.flags.settingsTouched;if(done){tutorial.flags.completed=tutorial.flags.completed||{};tutorial.flags.completed.settings=true;}return done;}return ORIGINAL.tutorialTaskDone(step);};
   demoTutorialStep=function(){const step=TUTORIAL_STEPS[tutorial.step];if(step?.check==='settings'){tutorial.flags.settingsTouched=true;gameAudio.setVolume(.78);renderSettings();toast('▶ 演示：已调整声音设置；下方敌军情报会实时显示其发展。','good');updateTutorialTask();requestAnimationFrame(placeTutorial);return;}ORIGINAL.demoTutorialStep();};
+  const originalEnterTutorialStep=enterTutorialStep;
+  enterTutorialStep=function(index){originalEnterTutorialStep(index);const step=TUTORIAL_STEPS[tutorial.step];if(step?.check==='settings'){setTimeout(()=>{window.toggleSettingsPanel?.(true);requestAnimationFrame(()=>{placeTutorial();setTimeout(placeTutorial,80);});},0);}};
 
   // ===== 事件绑定 =====
   document.addEventListener('pointerdown',()=>gameAudio.ensure(),{capture:true,once:true});

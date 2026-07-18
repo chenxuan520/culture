@@ -61,4 +61,6 @@
 .shortcutGrid span{display:inline-grid;place-items:center;min-height:22px;padding:2px 6px;border:1px solid rgba(174,221,255,.22);border-radius:6px;background:rgba(25,51,73,.72);font-size:8px;font-weight:900}
 .shortcutGrid b{font-size:9px;color:#d9edf8}
 .switchRow[data-worker-ai-row]{cursor:pointer}
+.action.blocked{opacity:.62;border-color:rgba(151,215,255,.16);background:rgba(31,45,59,.58);color:#9fb3c2}
+.action.blocked:hover{transform:none;border-color:rgba(255,209,102,.34);box-shadow:none}
 @media(max-width:720px){.settingsLayer,.helpLayer{left:10px;right:10px;bottom:56px;width:auto}.settingsGear{left:10px;bottom:10px}.helpGear{left:56px;bottom:10px}}
