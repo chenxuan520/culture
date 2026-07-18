@@ -128,7 +128,7 @@
     const cfg=difficultyConfig(key);return{difficulty:key,resources:{...cfg.starting},lastYield:{food:0,production:0,science:0,gold:0,energy:0},completed:new Set(cfg.startTechs),research:null,era:0,thinkTimer:.3,waveTimer:cfg.initialWave,waveNumber:0,plan:'建立资源网络',adaptation:0,lastAdaptMark:0,lastStand:false,citySerial:0,productionSerial:0,expansionRequested:false};
   }
   function createUnitEnhanced(type,team,q,r,extra={}){
-    const def=UNIT_DEFS[type];const base=def.hp||1,charges=def.worker?(extra.charges??5):0;
+    const def=UNIT_DEFS[type],isWorker=type==='worker'||!!def.worker;const base=def.hp||1,charges=isWorker?(extra.charges??5):0;
     return {id:uid('u'),type,def,team,q,r,hp:base,maxHp:base,baseMaxHp:base,route:[],moveProgress:0,target:null,manualTarget:false,holdPosition:false,
       attackTimer:Math.random()*.4,combatGlow:0,beamTick:0,aiWorker:!!def.worker,charges,work:null,overdrive:0,disrupted:0,spawnFlash:1,
       name:team==='player'?def.name:(def.name.startsWith('灰烬')||def.name==='熔核泰坦'?def.name:'灰烬·'+def.name),aiOrder:team==='enemy'?(def.combat?'garrison':'economy'):'',elite:false,waveId:0,colonyTarget:null,...extra};
