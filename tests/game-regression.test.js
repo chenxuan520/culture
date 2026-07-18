@@ -400,6 +400,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
         difficultyHint: $('difficultyHint').textContent,
         skirmishHint: $('skirmishHint').textContent,
         mapMode: $('mapModeSelect').value,
+        playerFaction: $('playerFactionSelect').value,
         playerSide: $('playerSideSelect').value,
         leftAI: $('leftAISlots').value,
         rightAI: $('rightAISlots').value,
@@ -412,8 +413,9 @@ test("settings/help panels and intro difficulty text are wired", () => {
   );
   assert.match(result.introDifficulty, /中等/);
   assert.match(result.difficultyHint, /中等/);
-  assert.match(result.skirmishHint, /默认地图 · 左侧开局 · 1v1/);
+  assert.match(result.skirmishHint, /默认地图 · 蓝色阵线 · 左侧开局 · 1v1/);
   assert.equal(result.mapMode, "default");
+  assert.equal(result.playerFaction, "blue");
   assert.equal(result.playerSide, "left");
   assert.equal(result.leftAI, "0");
   assert.equal(result.rightAI, "1");
@@ -507,12 +509,12 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.ok(result.area >= 840);
 });
 
-test("player side selection swaps starting sides and keeps distinct faction colors", () => {
+test("player faction and side selection use blue green yellow versus red black purple", () => {
   const { context } = createHarness();
   const result = runInGame(
     context,
     `(() => {
-      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right');
+      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right', 'green');
       state = rightStart;
       const playerCapital = rightStart.cities.find((city) => city.team === 'player' && city.capital);
       const enemyCapital = rightStart.cities.find((city) => city.team === 'enemy' && city.capital);
@@ -523,26 +525,43 @@ test("player side selection swaps starting sides and keeps distinct faction colo
       const before = rightStart.units.length;
       completeProduct(city, { id: 'warrior' });
       const produced = rightStart.units.slice(before).find((unit) => unit.type === 'warrior');
+      const colorKeys = ['blue', 'green', 'yellow', 'red', 'black', 'purple'];
+      const rgb = (hex) => {
+        const raw = hex.replace('#', '');
+        return [0, 2, 4].map((i) => parseInt(raw.slice(i, i + 2), 16));
+      };
+      const colorDistance = (a, b) => {
+        const x = rgb(factionColors[a].stroke), y = rgb(factionColors[b].stroke);
+        return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+      };
       return {
         playerSide: rightStart.playerSide,
+        statePlayerFaction: rightStart.playerFaction,
         playerMapSide: rightStart.playerMapSide,
         enemyMapSide: rightStart.enemyMapSide,
         playerRightOfEnemy: playerCapital.q > enemyCapital.q,
+        playerFaction: playerCapital.faction,
         allyFactions,
         enemyFactions,
-        distinctStrokes: new Set(['player', 'ally1', 'ally2', 'enemy1', 'enemy2', 'enemy3'].map((key) => factionColors[key].stroke)).size,
+        distinctStrokes: new Set(colorKeys.map((key) => factionColors[key].stroke)).size,
+        closePairs: colorKeys.flatMap((a, i) => colorKeys.slice(i + 1).map((b) => [a, b, colorDistance(a, b)])).filter((item) => item[2] < 90),
+        allColorsExist: colorKeys.every((key) => !!factionColors[key]),
         producedFaction: produced && produced.faction,
       };
     })()`,
   );
   assert.equal(result.playerSide, "right");
+  assert.equal(result.statePlayerFaction, "green");
+  assert.equal(result.playerFaction, "green");
   assert.equal(result.playerMapSide, "enemy");
   assert.equal(result.enemyMapSide, "player");
   assert.equal(result.playerRightOfEnemy, true);
-  assert.deepEqual(plain(result.allyFactions), ["ally1", "ally2"]);
-  assert.deepEqual(plain(result.enemyFactions), ["enemy1", "enemy2", "enemy3"]);
+  assert.deepEqual(plain(result.allyFactions), ["blue", "yellow"]);
+  assert.deepEqual(plain(result.enemyFactions), ["red", "black", "purple"]);
   assert.equal(result.distinctStrokes, 6);
-  assert.equal(result.producedFaction, "player");
+  assert.deepEqual(plain(result.closePairs), []);
+  assert.equal(result.allColorsExist, true);
+  assert.equal(result.producedFaction, "green");
 });
 
 test("ally AI uses independent economy instead of player resources", () => {
@@ -813,6 +832,17 @@ test("mouse command docs and handlers use left-click commands and right-click de
   assert.match(bootstrap, /canvas\.addEventListener\('click'[\s\S]*issueCommandAt\(x,y\)/);
   assert.match(bootstrap, /canvas\.addEventListener\('contextmenu'[\s\S]*state\.selection=null[\s\S]*renderPanels\(\)/);
   assert.equal(/contextmenu[\s\S]{0,180}issueCommandAt/.test(bootstrap), false);
+});
+
+test("WASD camera movement keeps A hold separate from tap command", () => {
+  const bootstrap = fs.readFileSync(path.join(ROOT, "assets/js/05-bootstrap.js"), "utf8");
+  const enhancements = fs.readFileSync(path.join(ROOT, "assets/js/06-enhancements.js"), "utf8");
+  assert.match(bootstrap, /let pendingACommand=null/);
+  assert.match(bootstrap, /pendingACommand=\{time:performance\.now\(\),x:state\.pointer\.x,y:state\.pointer\.y\}/);
+  assert.match(bootstrap, /performance\.now\(\)-pendingACommand\.time<180/);
+  assert.match(enhancements, /state\.keys\.has\('a'\)\)dx--/);
+  assert.match(enhancements, /state\.pointer[\s\S]*state\.screen\.w-edge/);
+  assert.match(enhancements, /轻点 A/);
 });
 
 test("Escape key is wired to pause outside tutorials", () => {

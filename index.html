@@ -337,7 +337,7 @@
           <section class="helpBlock">
             <h3>开局设置</h3>
             <p>
-              首页的“定制对局”用于开局前设置地图、玩家阵营和对战模式。默认地图保持固定面积和固定地形，适合按教程学习；随机地图会重新掷地图面积、地形和资源分布。玩家阵营决定你从左侧还是右侧开局，盟友会出现在你这一侧，敌人会出现在对面。盟友会协助作战，但使用自己的资源池生产和发展，不会消耗你的顶部资源。新工人是否生产后自动开 AI、开拓者是否到达后自动建城，都在左下角齿轮设置里调整。
+              首页的“定制对局”用于开局前设置地图、玩家阵营、出生位置和对战模式。玩家阵营只决定你这一队使用蓝、绿、黄哪一种友方颜色；盟友会自动使用剩余友方颜色。出生位置才决定你从左侧还是右侧开局；敌方固定使用红、黑、紫三种颜色。盟友会协助作战，但使用自己的资源池生产和发展，不会消耗你的顶部资源。新工人是否生产后自动开 AI、开拓者是否到达后自动建城，都在左下角齿轮设置里调整。
             </p>
           </section>
           <section class="helpBlock">
@@ -411,7 +411,7 @@
               ><b>框选单位</b> <span>WASD / 方向键</span><b>移动视野</b>
               <span>鼠标滚轮</span><b>缩放地图</b> <span>空格</span><b>按住显示单位名称和血条</b>
               <span>左键</span><b>选中后移动/攻击/设集结点</b> <span>右键</span><b>取消当前选择</b>
-              <span>A</span><b>对鼠标指向位置执行移动/攻击</b> <span>G</span><b>打开上次生产基地</b>
+              <span>轻点 A</span><b>对鼠标指向位置执行移动/攻击</b> <span>G</span><b>打开上次生产基地</b>
               <span>1-9 / 0</span><b>城市面板生产前十个项目</b>
               <span>P</span><b>暂停 / 继续</b> <span>F1</span
               ><b>打开新手教程</b> <span>?</span><b>打开这个帮助</b>
@@ -456,9 +456,17 @@
             >
             <label class="settingLine"
               ><span>玩家阵营</span
-              ><select id="playerSideSelect" aria-label="玩家阵营">
-                <option value="left" selected>左侧曙光阵线</option>
-                <option value="right">右侧曙光阵线</option>
+              ><select id="playerFactionSelect" aria-label="玩家阵营">
+                <option value="blue" selected>蓝色阵线</option>
+                <option value="green">绿色阵线</option>
+                <option value="yellow">黄色阵线</option>
+              </select></label
+            >
+            <label class="settingLine"
+              ><span>出生位置</span
+              ><select id="playerSideSelect" aria-label="出生位置">
+                <option value="left" selected>左侧开局</option>
+                <option value="right">右侧开局</option>
               </select></label
             >
             <label class="settingLine"
