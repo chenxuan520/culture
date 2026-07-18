@@ -99,10 +99,14 @@ function hexNeighbors(q,r){const out=[];for(const [dq,dr] of DIRS){const t=tileA
 
 const DEFAULT_MAP_CONFIG = {mode:'default',seed:24681357,width:20,height:15,water:.10,mountain:.07,forest:.17,hills:.17,desert:.13,resourceRate:1,ruinRate:.045};
 let currentMapConfig = {...DEFAULT_MAP_CONFIG};
-function createMapConfig(mode='default',seedOverride=null){
-  if(mode!=='random')return{...DEFAULT_MAP_CONFIG};
+function scaledMapSize(players=2,randomJitter=0,seed=0){
+  const scale=Math.sqrt(Math.max(2,players)/2),jitter=1+randomJitter;
+  return{width:Math.max(18,Math.round(MAP_W*scale*jitter)),height:Math.max(13,Math.round(MAP_H*scale*jitter))};
+}
+function createMapConfig(mode='default',seedOverride=null,players=2){
+  if(mode!=='random'){const size=scaledMapSize(players);return{...DEFAULT_MAP_CONFIG,width:size.width,height:size.height};}
   const seed=(seedOverride??((Date.now()^Math.floor(Math.random()*0x7fffffff))>>>0))>>>0,rnd=seeded(seed);
-  const width=18+Math.floor(rnd()*11),height=13+Math.floor(rnd()*8);
+  const size=scaledMapSize(players,(rnd()-.5)*.22,seed),width=size.width,height=size.height;
   return{mode:'random',seed,width,height,water:.07+rnd()*.09,mountain:.05+rnd()*.08,forest:.13+rnd()*.12,hills:.13+rnd()*.12,desert:.10+rnd()*.13,resourceRate:.85+rnd()*.55,ruinRate:.035+rnd()*.055};
 }
 function mapLayout(config=currentMapConfig){

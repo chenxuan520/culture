@@ -403,14 +403,18 @@ test("map mode can switch between default and reproducible random layouts", () =
     context,
     `(() => {
       const def = freshState(false, 'medium', 'default', 0, 1);
-      const randomA = createMapConfig('random', 123456);
-      const randomB = createMapConfig('random', 123456);
+      const defaultLarge = freshState(false, 'medium', 'default', 2, 3);
+      const randomA = createMapConfig('random', 123456, 6);
+      const randomB = createMapConfig('random', 123456, 6);
       const randomState = freshState(false, 'medium', 'random', 0, 1);
       return {
         defaultMode: def.mapMode,
         defaultSize: def.mapSize,
+        largeDefaultSize: defaultLarge.mapSize,
+        largeDefaultAreaRatio: defaultLarge.mapSize.width * defaultLarge.mapSize.height / (def.mapSize.width * def.mapSize.height),
         randomConfigStable: JSON.stringify(randomA) === JSON.stringify(randomB),
-        randomSizeInRange: randomState.mapSize.width >= 18 && randomState.mapSize.width <= 28 && randomState.mapSize.height >= 13 && randomState.mapSize.height <= 20,
+        randomLargeSizeInRange: randomA.width >= 31 && randomA.width <= 40 && randomA.height >= 23 && randomA.height <= 29,
+        randomSizeInRange: randomState.mapSize.width >= 18 && randomState.mapSize.width <= 23 && randomState.mapSize.height >= 13 && randomState.mapSize.height <= 17,
         randomMode: randomState.mapMode,
         randomTileCount: tiles.size,
         noWaterResources: [...tiles.values()].every((tile) => tile.terrain !== 'water' || !tile.resource),
@@ -419,7 +423,11 @@ test("map mode can switch between default and reproducible random layouts", () =
   );
   assert.equal(result.defaultMode, "default");
   assert.deepEqual(plain(result.defaultSize), { width: 20, height: 15 });
+  assert.ok(result.largeDefaultSize.width >= 34);
+  assert.ok(result.largeDefaultSize.height >= 25);
+  assert.ok(result.largeDefaultAreaRatio >= 2.8);
   assert.equal(result.randomConfigStable, true);
+  assert.equal(result.randomLargeSizeInRange, true);
   assert.equal(result.randomSizeInRange, true);
   assert.equal(result.randomMode, "random");
   assert.equal(result.randomTileCount, result.randomSizeInRange ? result.randomTileCount : 0);
@@ -447,6 +455,7 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
         playerWorkers: playerWorkers.length,
         allyWorkers: allyWorkers.length,
         enemyUnits: s.units.filter((unit) => unit.team === 'enemy').length,
+        area: s.mapSize.width * s.mapSize.height,
       };
     })()`,
   );
@@ -458,6 +467,7 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.equal(result.playerWorkers, 3);
   assert.equal(result.allyWorkers, 2);
   assert.ok(result.enemyUnits >= 9);
+  assert.ok(result.area >= 840);
 });
 
 test("new worker default AI setting affects produced workers", () => {

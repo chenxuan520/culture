@@ -164,8 +164,8 @@
     types.forEach((type,i)=>s.units.push(createUnit(type,'enemy',spots[i%spots.length][0],spots[i%spots.length][1],{aiOrder:'garrison'})));
   }
   freshState=function(started=false,difficulty=selectedDifficulty,mapMode=selectedMapMode,leftAI=selectedLeftAI,rightAI=selectedRightAI){
-    const mapConfig=createMapConfig(mapMode);tiles=generateMap(mapConfig);const layout=mapLayout(),cfg=difficultyConfig(difficulty);
     leftAI=clamp(Number(leftAI)||0,0,2);rightAI=clamp(Number(rightAI)||1,1,3);
+    const mapConfig=createMapConfig(mapMode,null,1+leftAI+rightAI);tiles=generateMap(mapConfig);const layout=mapLayout(),cfg=difficultyConfig(difficulty);
     const playerSlots=sideSlots('player',1+leftAI,layout),enemySlots=sideSlots('enemy',rightAI,layout);
     const playerCity=createCity('player',playerSlots[0].q,playerSlots[0].r,true,'曙光城'),enemyCity=createCity('enemy',enemySlots[0].q,enemySlots[0].r,true,'灰烬要塞');
     const s={started,paused:false,gameOver:false,speed:1,simTime:0,pulseTimer:0,enemySpawnTimer:0,enemyThink:0,difficulty,
