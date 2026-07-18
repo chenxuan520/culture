@@ -421,6 +421,50 @@ test("manual combat commands target enemy improvements and movement clears hold"
   assert.deepEqual(plain(result), { targetKind: "improvement", holdPosition: false });
 });
 
+test("manual unit movement overrides worker AI and soldier auto acquire", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const s = freshState(true, 'medium', 'default', 0, 1, 'left', 'spark');
+      state = s;
+      state.completed.add('agriculture');
+      state.completed.add('mining');
+      const worker = state.units.find((unit) => unit.team === 'player' && unit.type === 'worker');
+      worker.aiWorker = true;
+      chooseWorkerTask(worker);
+      const hadAutoWork = !!worker.work;
+      const workerGoal = [...tiles.values()].find((tile) => isLand(tile) && !cityAt(tile.q, tile.r) && findPath(worker, { q: worker.q, r: worker.r }, tile).length);
+      setUnitRoute(worker, workerGoal.q, workerGoal.r, true);
+      updateWorkers(1);
+
+      const soldier = state.units.find((unit) => unit.team === 'player' && unit.def.combat);
+      const enemy = state.units.find((unit) => unit.team === 'enemy');
+      enemy.q = soldier.q + 1;
+      enemy.r = soldier.r;
+      const soldierGoal = [...tiles.values()].find((tile) => isLand(tile) && !cityAt(tile.q, tile.r) && hexDistance(soldier, tile) >= 3 && findPath(soldier, { q: soldier.q, r: soldier.r }, tile).length);
+      setUnitRoute(soldier, soldierGoal.q, soldierGoal.r, true);
+      updateCombatUnit(soldier, 1);
+      return {
+        hadAutoWork,
+        workerAIAfterManualMove: worker.aiWorker,
+        workerWorkAfterManualMove: !!worker.work,
+        workerManualMove: worker.manualMove,
+        soldierTargetAfterManualMove: !!soldier.target,
+        soldierRouteStillExists: soldier.route.length > 0,
+        soldierManualMove: soldier.manualMove,
+      };
+    })()`,
+  );
+  assert.equal(result.hadAutoWork, true);
+  assert.equal(result.workerAIAfterManualMove, false);
+  assert.equal(result.workerWorkAfterManualMove, false);
+  assert.equal(result.workerManualMove, true);
+  assert.equal(result.soldierTargetAfterManualMove, false);
+  assert.equal(result.soldierRouteStillExists, true);
+  assert.equal(result.soldierManualMove, true);
+});
+
 test("settings/help panels and intro difficulty text are wired", () => {
   const { context, ids } = createHarness();
   const result = runInGame(

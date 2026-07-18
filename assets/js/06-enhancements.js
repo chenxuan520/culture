@@ -98,6 +98,7 @@
   function genericBuildingDef(id){return BUILDING_DEFS[id]||ENEMY_BUILDING_DEFS[id]||null;}
   function isBuildingProduct(id){return !!genericBuildingDef(id)&&!UNIT_DEFS[id];}
   productDef=function(id){return UNIT_DEFS[id]||BUILDING_DEFS[id]||ENEMY_BUILDING_DEFS[id]||null;};
+  function hasManualOverride(unit){return !!unit&&unit.team==='player'&&((unit.manualOverrideUntil||0)>(state?.simTime||0)||unit.manualMove&&unit.route?.length>0);}
 
   // ===== Web Audio：完全内嵌、无需音频文件 =====
   class StarfireAudio{
@@ -349,7 +350,7 @@
     if(!unit.def.combat||unit.hp<=0)return;
     let target=resolveTarget(unit.target);
     if(!target){
-      unit.target=null;unit.manualTarget=false;unit.acquireTimer=(unit.acquireTimer||0)-dt;
+      unit.target=null;unit.manualTarget=false;if(hasManualOverride(unit))return;unit.acquireTimer=(unit.acquireTimer||0)-dt;
       if(unit.acquireTimer<=0){unit.acquireTimer=unit.team==='player'?.28:(difficultyConfig().key==='hard'?.32:.58);autoAcquire(unit);target=resolveTarget(unit.target);}
     }
     if(!target)return;
@@ -467,9 +468,9 @@
   };
   finishWorkerBuild=function(unit){const job=unit?.work?{...unit.work}:null;ORIGINAL.finishWorkerBuild(unit);if(job){const t=tileAt(job.q,job.r);if(t?.improvement)t.improvement.faction=factionKey(unit);}gameAudio.sfx('build',.9);};
   foundCity=function(unit){const before=state.cities.length;ORIGINAL.foundCity(unit);const c=state.cities.length>before?state.cities[state.cities.length-1]:null;if(c)c.faction=factionKey(unit);};
-  setUnitRoute=function(unit,q,r,announce=false){const ok=ORIGINAL.setUnitRoute(unit,q,r,announce);if(ok&&announce&&unit.team==='player')gameAudio.sfx('move');return ok;};
+  setUnitRoute=function(unit,q,r,announce=false){const ok=ORIGINAL.setUnitRoute(unit,q,r,announce);if(ok&&announce&&unit.team==='player'){unit.manualMove=true;unit.manualOverrideUntil=(state.simTime||0)+8;if(unit.type==='worker'||unit.type==='enemyWorker'){unit.work=null;unit.aiWorker=false;}gameAudio.sfx('move');}return ok;};
   updateMovement=function(unit,dt){const hadRoute=unit.route?.length>0;ORIGINAL.updateMovement(unit,dt);if(selectedSettlerAutoFound&&unit.team==='player'&&(unit.type==='settler'||unit.type==='enemySettler')&&hadRoute&&!unit.route.length&&unit.hp>0){const t=tileAt(unit.q,unit.r);if(t&&isLand(t)&&!cityAt(t.q,t.r)&&!state.cities.some(c=>c.hp>0&&hexDistance(c,t)<4))foundCity(unit);}};
-  setLockedTarget=function(unit,target,manual=true){ORIGINAL.setLockedTarget(unit,target,manual);if(manual&&unit?.team==='player')gameAudio.sfx('lock');};
+  setLockedTarget=function(unit,target,manual=true){ORIGINAL.setLockedTarget(unit,target,manual);if(manual&&unit?.team==='player'){unit.manualMove=false;unit.manualOverrideUntil=0;gameAudio.sfx('lock');}};
   destroyTarget=function(target,attacker){ORIGINAL.destroyTarget(target,attacker);gameAudio.sfx(target.kind==='city'||target.obj?.def?.boss?'bomb':'shot',target.kind==='city'?1.25:.65);};
   endGame=function(win){ORIGINAL.endGame(win);gameAudio.sfx(win?'win':'loss',1.25);};
   clearHalfEnemies=function(){const before=state.units.filter(u=>u.team==='enemy').length;ORIGINAL.clearHalfEnemies();if(state.units.filter(u=>u.team==='enemy').length<before)gameAudio.sfx('bomb',1.15);};

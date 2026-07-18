@@ -53,7 +53,7 @@ function issueCommandAt(x,y){
     if(!count)toast('选中的单位不能攻击设施；请选择作战单位。','warn');else{toast(`已下达攻击设施命令：${count} 个单位`);renderPanels();}return;
   }
   const t=screenToTile(x,y);if(!t)return;
-  let moved=0;for(const u of units){u.target=null;u.manualTarget=false;if(u.type==='worker')u.work=null;if(setUnitRoute(u,t.q,t.r,units.length===1))moved++;}
+  let moved=0;for(const u of units){u.target=null;u.manualTarget=false;if(u.type==='worker'||u.type==='enemyWorker')u.work=null;if(setUnitRoute(u,t.q,t.r,units.length===1))moved++;}
   if(units.length>1)toast(moved?`已下达移动命令：${moved} 个单位`:'没有可通行的路线。',moved?'':'warn');renderPanels();
 }
 canvas.addEventListener('pointermove',e=>{

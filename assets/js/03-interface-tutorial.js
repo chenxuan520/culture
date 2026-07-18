@@ -96,8 +96,8 @@ function renderLogs(){$('logList').innerHTML=state.logs.map(l=>`<div class="logL
 function renderPanels(){renderTop();renderResearchPanel();renderSelection();renderGlobal();renderLogs();}
 
 function centerOn(q,r){const p=axialToWorld(q,r);state.camera.x=p.x;state.camera.y=p.y;}
-function stopUnit(u){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;if(u.type==='worker'||u.type==='enemyWorker')u.work=null;toast(`${u.def.name} 已停止当前命令。`);renderPanels();}
-function toggleHoldPosition(u){if(!u?.def?.combat||u.team!=='player')return;u.holdPosition=!u.holdPosition;if(u.holdPosition){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;toast(`${u.def.name} 将驻守当前格，不再主动追击。`,'good');}else toast(`${u.def.name} 恢复自动索敌。`,'good');renderPanels();}
+function stopUnit(u){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;u.manualMove=true;u.manualOverrideUntil=(state.simTime||0)+8;if(u.type==='worker'||u.type==='enemyWorker'){u.work=null;u.aiWorker=false;}toast(`${u.def.name} 已停止当前命令。`);renderPanels();}
+function toggleHoldPosition(u){if(!u?.def?.combat||u.team!=='player')return;u.holdPosition=!u.holdPosition;if(u.holdPosition){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;u.manualMove=true;u.manualOverrideUntil=(state.simTime||0)+8;toast(`${u.def.name} 将驻守当前格，不再主动追击。`,'good');}else{u.manualMove=false;u.manualOverrideUntil=0;toast(`${u.def.name} 恢复自动索敌。`,'good');}renderPanels();}
 function dispatchNearestWorker(tile){
   const workers=state.units.filter(u=>u.team==='player'&&(u.type==='worker'||u.type==='enemyWorker')&&u.charges>0&&!u.work).sort((a,b)=>hexDistance(a,tile)-hexDistance(b,tile));
   for(const u of workers)if(assignWorkerBuild(u,tile,true)){state.selection={kind:'unit',id:u.id};renderPanels();return;}
