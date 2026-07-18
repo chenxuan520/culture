@@ -2,15 +2,22 @@
 
 // ===== v4：框选单位、边缘滚屏；开场隐藏游戏内声音设置 =====
 (() => {
-  const dragState={pointerId:null,startX:0,startY:0,currentX:0,currentY:0,moved:false,suppressUntil:0};
+  const dragState={pointerId:null,startX:0,startY:0,currentX:0,currentY:0,startCamX:0,startCamY:0,currentCamX:0,currentCamY:0,mode:'box',moved:false,suppressUntil:0};
   const threshold=5;
+  function hasCommandSelection(){return state.selection?.kind==='unit'||state.selection?.kind==='units'||state.selection?.kind==='city';}
 
   function beginMapDrag(e){
-    if(!state?.started||state.gameOver||!e.isPrimary||e.button!==0)return;
+    if(!state?.started||state.gameOver||!e.isPrimary)return;
+    const rightDrag=e.button===2&&!hasCommandSelection();
+    if(e.button!==0&&!rightDrag)return;
     dragState.pointerId=e.pointerId;
     dragState.startX=e.clientX;dragState.startY=e.clientY;
     dragState.currentX=e.clientX;dragState.currentY=e.clientY;
+    dragState.startCamX=state.camera.x;dragState.startCamY=state.camera.y;
+    dragState.currentCamX=state.camera.x;dragState.currentCamY=state.camera.y;
+    dragState.mode=rightDrag?'pan':'box';
     dragState.moved=false;
+    if(rightDrag)e.preventDefault();
     try{canvas.setPointerCapture(e.pointerId);}catch{}
   }
   function moveMapDrag(e){
@@ -20,20 +27,27 @@
     if(!dragState.moved&&Math.hypot(dx,dy)<threshold)return;
     if(!dragState.moved){
       dragState.moved=true;
-      canvas.classList.add('isBoxSelecting');
+      if(dragState.mode==='box')canvas.classList.add('isBoxSelecting');
       const tip=$('tooltip');if(tip)tip.style.display='none';
       if(tutorial?.active){tutorial.flags.viewAction=true;updateTutorialTask();}
+    }
+    if(dragState.mode==='pan'){
+      state.camera.x=dragState.startCamX-dx/state.camera.zoom;
+      state.camera.y=dragState.startCamY-dy/state.camera.zoom;
+      dragState.currentCamX=state.camera.x;dragState.currentCamY=state.camera.y;
+      clampCamera();
     }
     e.preventDefault();e.stopImmediatePropagation();
   }
   function finishMapDrag(e){
     if(dragState.pointerId!==e.pointerId)return;
-    if(dragState.moved){
+    if(dragState.moved&&dragState.mode==='box'){
       const r=canvas.getBoundingClientRect(),x1=Math.min(dragState.startX,dragState.currentX)-r.left,y1=Math.min(dragState.startY,dragState.currentY)-r.top,x2=Math.max(dragState.startX,dragState.currentX)-r.left,y2=Math.max(dragState.startY,dragState.currentY)-r.top;
       const ids=state.units.filter(u=>u.hp>0&&u.team==='player').filter(u=>{const p=worldToScreen(unitDrawPos(u));return p.x>=x1&&p.x<=x2&&p.y>=y1&&p.y<=y2;}).map(u=>u.id);
       if(ids.length){state.selection=ids.length===1?{kind:'unit',id:ids[0]}:{kind:'units',ids};renderPanels();toast(ids.length===1?'已选择 1 个单位':`已框选 ${ids.length} 个单位`,'good');}
       dragState.suppressUntil=performance.now()+350;
     }
+    if(dragState.moved&&dragState.mode==='pan')state.rightPanSuppressUntil=performance.now()+250;
     dragState.pointerId=null;dragState.moved=false;
     canvas.classList.remove('isBoxSelecting');
     try{if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
@@ -48,12 +62,12 @@
       dragState.suppressUntil=0;e.preventDefault();e.stopImmediatePropagation();
     }
   },true);
-  canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
+  canvas.addEventListener('auxclick',e=>{if(e.button===1||e.button===2)e.preventDefault();});
 
   const oldDrawMap=drawMap;
   drawMap=function(){
     oldDrawMap();
-    if(!dragState.moved)return;
+    if(!dragState.moved||dragState.mode!=='box')return;
     const r=canvas.getBoundingClientRect(),dpr=state.screen.dpr||1,x=Math.min(dragState.startX,dragState.currentX)-r.left,y=Math.min(dragState.startY,dragState.currentY)-r.top,w=Math.abs(dragState.currentX-dragState.startX),h=Math.abs(dragState.currentY-dragState.startY);
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.save();ctx.fillStyle='rgba(89,220,255,.10)';ctx.strokeStyle='rgba(89,220,255,.85)';ctx.lineWidth=1.5;ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);ctx.restore();
   };

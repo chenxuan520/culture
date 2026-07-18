@@ -34,7 +34,7 @@ function openProductionBase(){
   if(!c){toast('没有可用的生产基地。','warn');return;}
   state.selection={kind:'city',id:c.id};state.lastProductionCityId=c.id;centerOn(c.q,c.r);renderPanels();toast(`已打开生产基地：${c.name}`,'good');
 }
-let pendingACommand=null;
+const MOVE_KEYS=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
 function issueCommandAt(x,y){
   const hit=hitTest(x,y),selectedCity=state.selection?.kind==='city'?cityById(state.selection.id):null;
   if(selectedCity?.team==='player'){
@@ -68,7 +68,9 @@ canvas.addEventListener('click',e=>{
   selectHit(hit);
 });
 canvas.addEventListener('contextmenu',e=>{
-  e.preventDefault();state.selection=null;renderPanels();toast('已取消当前选择。');
+  e.preventDefault();
+  if(performance.now()<(state.rightPanSuppressUntil||0))return;
+  if(selectedPlayerUnits().length){state.selection=null;renderPanels();toast('已取消当前选择。');}
 });
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(tutorial.active)tutorial.flags.viewAction=true;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,before=screenToWorld(x,y),old=state.camera.zoom;
@@ -79,21 +81,21 @@ mini.addEventListener('click',e=>{
 });
 function togglePause(){if(!state.started||state.gameOver)return;if(tutorial.active)tutorial.flags.pauseTouched=true;state.paused=!state.paused;toast(state.paused?'⏸ 模拟已暂停。':'▶ 模拟继续运行。');renderTop();updateTutorialTask();}
 window.addEventListener('keydown',e=>{
-  const k=e.key;if(k==='F1'){e.preventDefault();if(state.started&&!state.gameOver&&!tutorial.active)openTutorial(false);return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(k))e.preventDefault();
-  if(k==='Escape'){e.preventDefault();if(tutorial.active)closeTutorial(false);else togglePause();return;}
+  const k=e.key,code=e.code;if(k==='F1'){e.preventDefault();if(state.started&&!state.gameOver&&!tutorial.active)openTutorial(false);return;}
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(k)||['KeyW','KeyA','KeyS','KeyD'].includes(code))e.preventDefault();
+  if(k==='Escape'){e.preventDefault();state.keys.clear();if(tutorial.active)closeTutorial(false);else togglePause();return;}
   const tag=e.target?.tagName?.toLowerCase();if(tag==='input'||tag==='select'||tag==='textarea')return;
-  if(k===' '){state.showIntel=true;if(tutorial.active)tutorial.flags.viewAction=true;return;}if(k.startsWith('Arrow')){state.keys.add(k);if(tutorial.active)tutorial.flags.viewAction=true;return;}
+  if(k===' '){state.showIntel=true;if(tutorial.active)tutorial.flags.viewAction=true;return;}if(MOVE_KEYS.has(code)){state.keys.add(code);if(tutorial.active)tutorial.flags.viewAction=true;return;}
   if((k==='g'||k==='G')&&!e.repeat&&state.started&&!state.gameOver){e.preventDefault();openProductionBase();return;}
-  if((k==='a'||k==='A')&&!e.repeat&&state.pointer&&state.started&&!state.gameOver){pendingACommand={time:performance.now(),x:state.pointer.x,y:state.pointer.y};}
   const hotkeys=['1','2','3','4','5','6','7','8','9','0'];const hotIndex=hotkeys.indexOf(k);
   if(hotIndex>=0&&state.selection?.kind==='city'&&state.started&&!state.gameOver){const c=cityById(state.selection.id);if(c&&!c.allyAI&&c.team==='player'){e.preventDefault();const id=PRODUCT_IDS[hotIndex];if(id)queueProduct(c,id);return;}}
   if((k==='p'||k==='P')&&!e.repeat)togglePause();if((k==='c'||k==='C')&&!e.repeat&&state.started&&!state.gameOver)clearHalfEnemies();
 });
-window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();state.keys.delete(e.key);state.keys.delete(k);if(k==='a'&&pendingACommand){const tap=performance.now()-pendingACommand.time<180;if(tap&&state.started&&!state.gameOver)issueCommandAt(pendingACommand.x,pendingACommand.y);pendingACommand=null;}if(e.key===' ')state.showIntel=false;});
-window.addEventListener('blur',()=>{pendingACommand=null;state.keys.clear();state.showIntel=false;});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){pendingACommand=null;state.keys.clear();state.showIntel=false;}});
+window.addEventListener('keyup',e=>{state.keys.delete(e.code);if(e.key===' ')state.showIntel=false;});
+window.addEventListener('blur',()=>{state.keys.clear();state.showIntel=false;});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){state.keys.clear();state.showIntel=false;}});
 function updateCamera(dt){
-  let dx=0,dy=0;if(state.keys.has('ArrowLeft'))dx--;if(state.keys.has('ArrowRight'))dx++;if(state.keys.has('ArrowUp'))dy--;if(state.keys.has('ArrowDown'))dy++;
+  let dx=0,dy=0;if(state.keys.has('ArrowLeft')||state.keys.has('KeyA'))dx--;if(state.keys.has('ArrowRight')||state.keys.has('KeyD'))dx++;if(state.keys.has('ArrowUp')||state.keys.has('KeyW'))dy--;if(state.keys.has('ArrowDown')||state.keys.has('KeyS'))dy++;
   if(state.started&&!state.gameOver&&state.pointer){const edge=28;if(state.pointer.x<edge)dx--;else if(state.pointer.x>state.screen.w-edge)dx++;if(state.pointer.y<edge)dy--;else if(state.pointer.y>state.screen.h-edge)dy++;}
   if(dx||dy){const len=Math.hypot(dx,dy),speed=480/state.camera.zoom;state.camera.x+=dx/len*speed*dt;state.camera.y+=dy/len*speed*dt;clampCamera();}
 }

@@ -849,15 +849,24 @@ test("mouse command docs and handlers use left-click commands and right-click de
   assert.equal(/contextmenu[\s\S]{0,180}issueCommandAt/.test(bootstrap), false);
 });
 
-test("WASD camera movement keeps A hold separate from tap command", () => {
+test("WASD camera movement has no A command conflict", () => {
   const bootstrap = fs.readFileSync(path.join(ROOT, "assets/js/05-bootstrap.js"), "utf8");
   const enhancements = fs.readFileSync(path.join(ROOT, "assets/js/06-enhancements.js"), "utf8");
-  assert.match(bootstrap, /let pendingACommand=null/);
-  assert.match(bootstrap, /pendingACommand=\{time:performance\.now\(\),x:state\.pointer\.x,y:state\.pointer\.y\}/);
-  assert.match(bootstrap, /performance\.now\(\)-pendingACommand\.time<180/);
-  assert.match(enhancements, /state\.keys\.has\('a'\)\)dx--/);
+  const text = [bootstrap, enhancements, fs.readFileSync(path.join(ROOT, "assets/js/03-interface-tutorial.js"), "utf8"), fs.readFileSync(path.join(ROOT, "index.html"), "utf8")].join("\n");
+  assert.equal(/pendingACommand|轻点 A|按 A 会|对鼠标指向执行移动\/攻击/.test(text), false);
+  assert.match(bootstrap, /MOVE_KEYS=new Set\(\['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'\]\)/);
+  assert.match(bootstrap, /state\.keys\.add\(code\)/);
+  assert.match(bootstrap, /state\.keys\.delete\(e\.code\)/);
+  assert.match(enhancements, /state\.keys\.has\('KeyA'\)\)dx--/);
   assert.match(enhancements, /state\.pointer[\s\S]*state\.screen\.w-edge/);
-  assert.match(enhancements, /轻点 A/);
+});
+
+test("right mouse drag pans map when no command selection exists", () => {
+  const source = fs.readFileSync(path.join(ROOT, "assets/js/07-map-interactions.js"), "utf8");
+  assert.match(source, /const rightDrag=e\.button===2&&!hasCommandSelection\(\)/);
+  assert.match(source, /dragState\.mode=rightDrag\?'pan':'box'/);
+  assert.match(source, /state\.camera\.x=dragState\.startCamX-dx\/state\.camera\.zoom/);
+  assert.match(source, /state\.rightPanSuppressUntil=performance\.now\(\)\+250/);
 });
 
 test("Escape key is wired to pause outside tutorials", () => {
