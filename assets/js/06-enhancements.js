@@ -169,7 +169,7 @@
     const playerSlots=sideSlots('player',1+leftAI,layout),enemySlots=sideSlots('enemy',rightAI,layout);
     const playerCity=createCity('player',playerSlots[0].q,playerSlots[0].r,true,'曙光城'),enemyCity=createCity('enemy',enemySlots[0].q,enemySlots[0].r,true,'灰烬要塞');
     const s={started,paused:false,gameOver:false,speed:1,simTime:0,pulseTimer:0,enemySpawnTimer:0,enemyThink:0,difficulty,
-      resources:{food:140,production:220,science:96,gold:260,energy:82},lastYield:{food:0,production:0,science:0,gold:0,energy:0},enemyAI:makeEnemyAI(difficulty),
+      resources:{food:140,production:220,science:42,gold:260,energy:82},lastYield:{food:0,production:0,science:0,gold:0,energy:0},enemyAI:makeEnemyAI(difficulty),
       cities:[playerCity,enemyCity],units:[],effects:[],logs:[],completed:new Set(),research:null,aiTech:true,selection:{kind:'city',id:playerCity.id},hovered:null,showIntel:false,keys:new Set(),score:0,era:0,overdriveGlobal:0,uiTimer:0,uiHoldUntil:0,toastSeq:0,tutorialActive:false,tutorialRewarded:false,singularityCooldown:0,
       mapMode:currentMapConfig.mode,mapSeed:currentMapConfig.seed,mapSize:{width:mapWidth(),height:mapHeight()},leftAI,rightAI,
       camera:{x:axialToWorld(layout.camera.q,layout.camera.r).x,y:axialToWorld(layout.camera.q,layout.camera.r).y,zoom:.86},screen:{w:1,h:1,dpr:1},lastFrame:performance.now(),acc:0};

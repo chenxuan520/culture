@@ -282,6 +282,29 @@ test("data definitions reference existing resources, techs, and products", () =>
   assert.deepEqual(plain(errors), []);
 });
 
+test("research pacing is not instant-unlock fast", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const cheapest = Math.min(...TECHS.map((tech) => tech.cost));
+      const secondCheapest = TECHS.map((tech) => tech.cost).sort((a, b) => a - b)[1];
+      const fastest = Math.min(...TECHS.map((tech) => tech.time));
+      return {
+        startingScience: state.resources.science,
+        cheapest,
+        secondCheapest,
+        fastest,
+        canStartOne: state.resources.science >= cheapest,
+        cannotBuyTwo: state.resources.science < cheapest + secondCheapest,
+      };
+    })()`,
+  );
+  assert.equal(result.canStartOne, true);
+  assert.equal(result.cannotBuyTwo, true);
+  assert.ok(result.fastest >= 8);
+});
+
 test("enhanced worker initialization keeps player workers usable", () => {
   const { context } = createHarness();
   const result = runInGame(

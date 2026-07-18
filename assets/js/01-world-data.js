@@ -40,17 +40,17 @@ const ERAS = [
   {name:'现代时代',icon:'📡'}, {name:'原子时代',icon:'⚛️'}, {name:'未来时代',icon:'🌌'}
 ];
 const TECHS = [
-  {id:'agriculture',name:'灌溉网络',icon:'🌱',era:0,time:1.5,cost:18,pre:[],desc:'解锁智能农场，城市食物脉冲 +1。',unlock:['farm']},
-  {id:'mining',name:'深层采矿',icon:'⛏️',era:0,time:1.7,cost:20,pre:[],desc:'解锁磁轨矿山与永续伐木场。',unlock:['mine','lumber']},
-  {id:'engineering',name:'模块化工程',icon:'🏗️',era:1,time:2.0,cost:27,pre:['agriculture','mining'],desc:'解锁锻造工坊、维修无人机和开拓者。',unlock:['forge','repairDrone','settler']},
-  {id:'tactics',name:'联合作战学',icon:'🎯',era:1,time:2.1,cost:28,pre:['mining'],desc:'解锁弓手、骑士与兵种配合加成。',unlock:['archer','knight']},
-  {id:'combustion',name:'内燃机与装甲',icon:'🛞',era:2,time:2.6,cost:36,pre:['engineering'],desc:'解锁主战坦克与深层萃取井。',unlock:['tank','extractor']},
-  {id:'electricity',name:'城市电网',icon:'⚡',era:2,time:2.5,cost:35,pre:['engineering'],desc:'解锁学院、日冕电站与护盾穹顶。',unlock:['academy','solar','shieldDome']},
-  {id:'aeronautics',name:'反重力航空',icon:'🎈',era:3,time:3.1,cost:44,pre:['combustion','electricity'],desc:'解锁空港与基洛夫飞艇。',unlock:['skyDock','kirov']},
-  {id:'prismatics',name:'光棱共振',icon:'🔷',era:3,time:3.0,cost:45,pre:['electricity','tactics'],desc:'解锁光棱坦克与光棱矩阵。',unlock:['prism','prismMatrix']},
-  {id:'automation',name:'自治工团',icon:'🤖',era:4,time:3.8,cost:54,pre:['aeronautics'],desc:'工人 AI 建造更快，维修半径提升。',unlock:['automation']},
-  {id:'quantum',name:'量子纠缠武器',icon:'🌀',era:4,time:4.0,cost:58,pre:['prismatics'],desc:'解锁量子行者与量子中继站。',unlock:['quantumWalker','quantumRelay']},
-  {id:'singularity',name:'可控奇点',icon:'🌌',era:5,time:4.8,cost:72,pre:['automation','quantum'],desc:'全军获得 20% 火力，城市每脉冲生成额外能量。',unlock:['singularity']}
+  {id:'agriculture',name:'灌溉网络',icon:'🌱',era:0,time:8,cost:34,pre:[],desc:'解锁智能农场，城市食物脉冲 +1。',unlock:['farm']},
+  {id:'mining',name:'深层采矿',icon:'⛏️',era:0,time:9,cost:38,pre:[],desc:'解锁磁轨矿山与永续伐木场。',unlock:['mine','lumber']},
+  {id:'engineering',name:'模块化工程',icon:'🏗️',era:1,time:13,cost:62,pre:['agriculture','mining'],desc:'解锁锻造工坊、维修无人机和开拓者。',unlock:['forge','repairDrone','settler']},
+  {id:'tactics',name:'联合作战学',icon:'🎯',era:1,time:14,cost:64,pre:['mining'],desc:'解锁弓手、骑士与兵种配合加成。',unlock:['archer','knight']},
+  {id:'combustion',name:'内燃机与装甲',icon:'🛞',era:2,time:18,cost:92,pre:['engineering'],desc:'解锁主战坦克与深层萃取井。',unlock:['tank','extractor']},
+  {id:'electricity',name:'城市电网',icon:'⚡',era:2,time:18,cost:90,pre:['engineering'],desc:'解锁学院、日冕电站与护盾穹顶。',unlock:['academy','solar','shieldDome']},
+  {id:'aeronautics',name:'反重力航空',icon:'🎈',era:3,time:24,cost:126,pre:['combustion','electricity'],desc:'解锁空港与基洛夫飞艇。',unlock:['skyDock','kirov']},
+  {id:'prismatics',name:'光棱共振',icon:'🔷',era:3,time:24,cost:128,pre:['electricity','tactics'],desc:'解锁光棱坦克与光棱矩阵。',unlock:['prism','prismMatrix']},
+  {id:'automation',name:'自治工团',icon:'🤖',era:4,time:30,cost:168,pre:['aeronautics'],desc:'工人 AI 建造更快，维修半径提升。',unlock:['automation']},
+  {id:'quantum',name:'量子纠缠武器',icon:'🌀',era:4,time:32,cost:176,pre:['prismatics'],desc:'解锁量子行者与量子中继站。',unlock:['quantumWalker','quantumRelay']},
+  {id:'singularity',name:'可控奇点',icon:'🌌',era:5,time:38,cost:240,pre:['automation','quantum'],desc:'全军获得 20% 火力，城市每脉冲生成额外能量。',unlock:['singularity']}
 ];
 const UNIT_DEFS = {
   worker:{name:'工人',icon:'👷',role:'支援',hp:105,attack:2,range:1,interval:1.35,move:1.15,cost:{food:10,production:18,gold:8},time:2.0,tech:null,combat:false,desc:'拥有 5 次建设次数，可开启 AI 因地制宜建造并维修附近友军。'},
@@ -177,7 +177,7 @@ function freshState(started=false){
   const playerCity=createCity('player',layout.player.q,layout.player.r,true,'曙光城');
   const enemyCity=createCity('enemy',layout.enemy.q,layout.enemy.r,true,'灰烬要塞');
   const s={started,paused:false,gameOver:false,speed:1,simTime:0,pulseTimer:0,enemySpawnTimer:0,enemyThink:0,
-    resources:{food:140,production:220,science:96,gold:260,energy:82},lastYield:{food:0,production:0,science:0,gold:0,energy:0},
+    resources:{food:140,production:220,science:42,gold:260,energy:82},lastYield:{food:0,production:0,science:0,gold:0,energy:0},
     cities:[playerCity,enemyCity],units:[],effects:[],logs:[],completed:new Set(),research:null,aiTech:true,selection:{kind:'city',id:playerCity.id},
     hovered:null,showIntel:false,keys:new Set(),score:0,era:0,overdriveGlobal:0,uiTimer:0,uiHoldUntil:0,toastSeq:0,tutorialActive:false,tutorialRewarded:false,
     mapMode:currentMapConfig.mode,mapSeed:currentMapConfig.seed,mapSize:{width:mapWidth(),height:mapHeight()},
