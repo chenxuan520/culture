@@ -555,6 +555,27 @@ test("ally AI uses independent economy instead of player resources", () => {
   assert.equal(result.playerYieldIgnoresAllyCity, true);
 });
 
+test("enemy garrison over cap launches an attack instead of camping base", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const s = freshState(true, 'medium', 'default', 0, 1);
+      state = s;
+      const city = state.cities.find((item) => item.team === 'enemy' && item.capital);
+      for (let i = 0; i < 10; i++) state.units.push(createUnit('raider', 'enemy', city.q, city.r, { aiOrder: 'garrison' }));
+      state.enemyAI.waveTimer = 99;
+      window.__STARFIRE_DEBUG__.updateEnemyStrategicAI(1);
+      return {
+        attacking: state.units.filter((unit) => unit.team === 'enemy' && unit.aiOrder === 'attack').length,
+        wave: state.enemyAI.waveNumber,
+      };
+    })()`,
+  );
+  assert.ok(result.attacking > 0);
+  assert.ok(result.wave > 0);
+});
+
 test("new worker default AI setting affects produced workers", () => {
   const { context } = createHarness();
   const result = runInGame(
@@ -643,6 +664,24 @@ test("map generation does not create undevelopable water resources", () => {
   const { context } = createHarness();
   const ok = runInGame(context, `[...tiles.values()].every((tile) => tile.terrain !== 'water' || !tile.resource)`);
   assert.equal(ok, true);
+});
+
+test("tile pulse contribution displays actual yield, not pulse duration", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      state.completed.add('agriculture');
+      state.completed.add('mining');
+      const tile = [...tiles.values()].find((item) => canImproveTile(item).ok);
+      const type = canImproveTile(tile).type;
+      tile.improvement = { type, team: 'player', owner: 'player', hp: IMPROVEMENTS[type].hp, maxHp: IMPROVEMENTS[type].hp };
+      const html = renderTileSelection(tile);
+      return { hasDurationText: html.includes('1.0 模拟秒'), hasYield: html.includes(yieldText(tileYield(tile))) };
+    })()`,
+  );
+  assert.equal(result.hasDurationText, false);
+  assert.equal(result.hasYield, true);
 });
 
 test("visible docs do not contain removed terminology", () => {
