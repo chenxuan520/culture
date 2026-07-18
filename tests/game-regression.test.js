@@ -566,15 +566,51 @@ test("medium 1v1 spark enemy does not open with a full army or instant wave", ()
   );
   assert.deepEqual(plain(result.start.enemyUnits), ["warrior", "scout"]);
   assert.deepEqual(plain(result.start.resources), {
-    food: 88,
-    production: 82,
-    science: 38,
-    gold: 92,
-    energy: 26,
+    food: 92,
+    production: 72,
+    science: 42,
+    gold: 118,
+    energy: 32,
   });
-  assert.equal(result.start.waveTimer, 14);
+  assert.equal(result.start.waveTimer, 16);
   assert.equal(result.after10.wave, 0);
   assert.ok(result.after10.enemyUnits.length <= 3);
+});
+
+test("enemy difficulty does not use starting resource or tech cheats", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const playerStart = { food: 92, production: 72, science: 42, gold: 118, energy: 32 };
+      const states = Object.fromEntries(['easy', 'medium', 'hard'].map((difficulty) => {
+        const s = freshState(true, difficulty, 'default', 0, 1, 'left', 'ash');
+        state = s;
+        return [difficulty, {
+          resources: { ...state.enemyAI.resources },
+          techs: [...state.enemyAI.completed],
+          units: state.units.filter((unit) => unit.team === 'enemy').map((unit) => ({
+            type: unit.type,
+            hp: unit.hp,
+            maxHp: unit.maxHp,
+            attack: unit.def.attack,
+            elite: unit.elite,
+          })),
+          capitalShield: state.cities.find((city) => city.team === 'enemy' && city.capital).shield,
+        }];
+      }));
+      return { playerStart, states };
+    })()`,
+  );
+  const expectedStart = { food: 92, production: 72, science: 42, gold: 118, energy: 32 };
+  for (const difficulty of ["easy", "medium", "hard"]) {
+    assert.deepEqual(plain(result.states[difficulty].resources), expectedStart);
+    assert.deepEqual(plain(result.states[difficulty].techs), []);
+  }
+  assert.equal(result.states.hard.units.every((unit) => unit.hp === unit.maxHp), true);
+  assert.equal(result.states.hard.units.every((unit) => unit.elite === false), true);
+  assert.equal(result.states.medium.capitalShield, 0);
+  assert.equal(result.states.hard.capitalShield, 0);
 });
 
 test("player faction selection changes player colors and units", () => {
