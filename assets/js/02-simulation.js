@@ -57,7 +57,7 @@ function updateMovement(unit,dt){
     if(!unit.route.length){unit.moveProgress=0;break;}
   }
 }
-function improvementTech(type){return {farm:'agriculture',harbor:'agriculture',mine:'mining',lumber:'mining',lab:'mining',solar:'electricity',extractor:'combustion'}[type];}
+function improvementTech(type){return {lab:'mining',solar:'electricity',extractor:'combustion'}[type]||null;}
 function improvementForTile(tile){
   if(!tile)return null;
   if(tile.resource==='wheat')return'farm';if(tile.resource==='iron')return'mine';if(tile.resource==='crystal')return'lab';if(tile.resource==='oil')return'extractor';if(tile.resource==='timber')return'lumber';if(tile.resource==='fish')return'harbor';
@@ -70,8 +70,8 @@ function tileYield(tile){
   return out;
 }
 function cityYield(city){
-  if(city.team!=='player'||city.allyAI)return{};const y={food:4,production:3,science:1,gold:5,energy:1};
-  if(city.capital)y.gold+=2;y.food+=Math.floor(city.population/3);
+  if(city.team!=='player'||city.allyAI)return{};const y={food:1.5,production:1.4,science:1,gold:2,energy:0};
+  if(city.capital)y.gold+=1;y.food+=Math.floor(city.population/5);
   if(hasBuilding(city,'granary'))y.food+=3;if(hasBuilding(city,'forge'))y.production+=2;if(hasBuilding(city,'academy'))y.science+=4;if(hasBuilding(city,'quantumRelay'))y.energy+=4;
   if(state.completed.has('agriculture'))y.food+=1;if(state.completed.has('singularity'))y.energy+=2;
   return y;
@@ -90,7 +90,7 @@ function resourcePulse(){
     if(hasBuilding(c,'quantumRelay')){
       for(const u of state.units)if(u.team==='player'&&hexDistance(u,c)<=2)u.hp=Math.min(u.maxHp,u.hp+8);
     }
-    if(state.resources.food>35+c.population*7&&c.population<15){state.resources.food-=6+c.population;c.population++;floating(c.q,c.r,'人口 +1','#66e7a7',-20);}
+    if(state.resources.food>90+c.population*14&&c.population<15){state.resources.food-=24+c.population*2;c.population++;floating(c.q,c.r,'人口 +1','#66e7a7',-20);}
   }
 }
 function startResearch(id,fromAI=false){

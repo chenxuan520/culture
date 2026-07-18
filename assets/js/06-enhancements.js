@@ -248,7 +248,7 @@
   }
   tileYield=function(tile){return tileYieldForTeam(tile,'player');};
   function enemyCityYield(city){
-    if(city.team!=='enemy')return{};const y={food:3.2,production:3.4,science:2.1,gold:3.6,energy:1.1};if(city.capital){y.production+=1.3;y.science+=1.1;y.gold+=1.4;}y.food+=Math.floor(city.population/4);
+    if(city.team!=='enemy')return{};const y={food:1.5,production:1.4,science:1,gold:2,energy:0};if(city.capital)y.gold+=1;y.food+=Math.floor(city.population/5);
     if(city.buildings.includes('ashGranary')||city.buildings.includes('granary'))y.food+=4;
     if(city.buildings.includes('warLab')||city.buildings.includes('academy'))y.science+=4.5;
     if(city.buildings.includes('warFoundry')||city.buildings.includes('forge'))y.production+=5;
@@ -257,7 +257,7 @@
     return y;
   }
   function allyCityYield(city){
-    if(!city.allyAI)return{};const y={food:3,production:3,science:1.5,gold:3,energy:.8};y.food+=Math.floor(city.population/4);
+    if(!city.allyAI)return{};const y={food:1.5,production:1.4,science:1,gold:2,energy:0};y.food+=Math.floor(city.population/5);
     if(city.buildings.includes('granary'))y.food+=3;if(city.buildings.includes('forge'))y.production+=2;if(city.buildings.includes('academy'))y.science+=4;if(city.buildings.includes('quantumRelay'))y.energy+=4;
     return y;
   }
@@ -265,9 +265,9 @@
   function calculateEnemyYield(){const total={food:0,production:0,science:0,gold:0,energy:0},cfg=difficultyConfig();for(const c of state.cities)if(c.team==='enemy'&&c.hp>0)for(const[k,v]of Object.entries(enemyCityYield(c)))total[k]+=v;for(const t of tiles.values())for(const[k,v]of Object.entries(tileYieldForTeam(t,'enemy')))total[k]+=v;for(const k of RESOURCE_KEYS)total[k]*=cfg.economy;return total;}
   resourcePulse=function(){
     const y=calculateYield();state.lastYield=y;for(const k of RESOURCE_KEYS)state.resources[k]+=y[k]||0;
-    for(const c of state.cities){if(c.team!=='player'||c.hp<=0||c.allyAI)continue;if(hasBuilding(c,'shieldDome')){c.maxShield=180;c.shield=Math.min(c.maxShield,c.shield+7);}if(hasBuilding(c,'quantumRelay'))for(const u of state.units)if(u.team==='player'&&hexDistance(u,c)<=2)u.hp=Math.min(u.maxHp,u.hp+8);if(state.resources.food>35+c.population*7&&c.population<15){state.resources.food-=6+c.population;c.population++;floating(c.q,c.r,'人口 +1','#66e7a7',-20);}}
-    if(state.allyAI){const ay=calculateAllyYield();state.allyAI.lastYield=ay;for(const k of RESOURCE_KEYS)state.allyAI.resources[k]+=ay[k]||0;for(const c of state.cities)if(c.allyAI&&c.hp>0&&state.allyAI.resources.food>30+c.population*7&&c.population<12){state.allyAI.resources.food-=5+c.population;c.population++;}}
-    if(!state.tutorialActive&&state.enemyAI){const ey=calculateEnemyYield(),ai=state.enemyAI,cfg=difficultyConfig();ai.lastYield=ey;for(const k of RESOURCE_KEYS)ai.resources[k]+=ey[k]||0;for(const c of state.cities)if(c.team==='enemy'&&c.hp>0&&ai.resources.food>30+c.population*7&&c.population<(cfg.key==='hard'?18:12)){ai.resources.food-=5+c.population;c.population++;}
+    for(const c of state.cities){if(c.team!=='player'||c.hp<=0||c.allyAI)continue;if(hasBuilding(c,'shieldDome')){c.maxShield=180;c.shield=Math.min(c.maxShield,c.shield+7);}if(hasBuilding(c,'quantumRelay'))for(const u of state.units)if(u.team==='player'&&hexDistance(u,c)<=2)u.hp=Math.min(u.maxHp,u.hp+8);if(state.resources.food>90+c.population*14&&c.population<15){state.resources.food-=24+c.population*2;c.population++;floating(c.q,c.r,'人口 +1','#66e7a7',-20);}}
+    if(state.allyAI){const ay=calculateAllyYield();state.allyAI.lastYield=ay;for(const k of RESOURCE_KEYS)state.allyAI.resources[k]+=ay[k]||0;for(const c of state.cities)if(c.allyAI&&c.hp>0&&state.allyAI.resources.food>80+c.population*12&&c.population<12){state.allyAI.resources.food-=20+c.population*2;c.population++;}}
+    if(!state.tutorialActive&&state.enemyAI){const ey=calculateEnemyYield(),ai=state.enemyAI,cfg=difficultyConfig();ai.lastYield=ey;for(const k of RESOURCE_KEYS)ai.resources[k]+=ey[k]||0;for(const c of state.cities)if(c.team==='enemy'&&c.hp>0&&ai.resources.food>80+c.population*12&&c.population<(cfg.key==='hard'?18:12)){ai.resources.food-=20+c.population*2;c.population++;}
       if(cfg.maxAdapt>0){const mark=Math.floor(state.simTime/cfg.adaptEvery);if(mark>ai.lastAdaptMark&&ai.adaptation<cfg.maxAdapt){ai.lastAdaptMark=mark;ai.adaptation++;addLog(`🧠 ${enemyFactionLabel()} AI 完成第 ${ai.adaptation} 次战术适应，决策和反制会更积极。`,'warn');if(cfg.key==='hard')toast(`☠️ 困难 AI 战术适应 ${ai.adaptation}/${cfg.maxAdapt}`,'danger');}}
     }
     if(Math.floor(state.simTime)%4===0)gameAudio.sfx('pulse',.7);

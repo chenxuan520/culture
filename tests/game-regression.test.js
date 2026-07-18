@@ -294,6 +294,7 @@ test("research starts at zero and default pulse adds one science", () => {
       const pulseYield = cityYield(city);
       return {
         startingScience: state.resources.science,
+        pulseYield,
         pulseScience: pulseYield.science,
         cheapest,
         secondCheapest,
@@ -304,9 +305,17 @@ test("research starts at zero and default pulse adds one science", () => {
     })()`,
   );
   assert.equal(result.startingScience, 0);
+  assert.deepEqual(plain(result.pulseYield), {
+    food: 1.5,
+    production: 1.4,
+    science: 1,
+    gold: 3,
+    energy: 0,
+  });
   assert.equal(result.pulseScience, 1);
   assert.equal(result.canStartOne, false);
   assert.equal(result.cannotBuyTwo, true);
+  assert.ok(result.cheapest <= 14);
   assert.ok(result.fastest >= 8);
 });
 
@@ -342,6 +351,35 @@ test("starting production stockpile requires early development choices", () => {
   assert.ok(result.goldAfter < result.starting.gold);
 });
 
+test("city passive growth does not replace expansion economy", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const start = { population: city.population, resources: { ...state.resources } };
+      state.started = true;
+      for (let i = 0; i < 10; i++) resourcePulse();
+      return {
+        start,
+        population: city.population,
+        resources: { ...state.resources },
+        lastYield: { ...state.lastYield },
+      };
+    })()`,
+  );
+  assert.equal(result.population, result.start.population);
+  assert.deepEqual(plain(result.lastYield), {
+    food: 1.5,
+    production: 1.4,
+    science: 1,
+    gold: 3,
+    energy: 0,
+  });
+  assert.ok(result.resources.food - result.start.resources.food <= 20);
+  assert.ok(result.resources.gold - result.start.resources.gold <= 30);
+});
+
 test("enhanced worker initialization keeps player workers usable", () => {
   const { context } = createHarness();
   const result = runInGame(
@@ -370,15 +408,20 @@ test("enhanced worker initialization keeps player workers usable", () => {
   });
 });
 
-test("worker build flow is blocked before tech and works after tech", () => {
+test("worker can build basic improvements before tech while advanced improvements stay gated", () => {
   const { context } = createHarness();
   const result = runInGame(
     context,
     `(() => {
       const worker = state.units.find((unit) => unit.team === 'player' && unit.type === 'worker');
-      const blockedBeforeTech = [...tiles.values()]
+      const basicTypes = new Set(['farm', 'mine', 'lumber']);
+      const basicBeforeTech = [...tiles.values()]
         .filter((tile) => !tile.improvement && !cityAt(tile.q, tile.r))
-        .some((tile) => !canImproveTile(tile).ok && /需要科技|工人无法|暂无/.test(canImproveTile(tile).reason));
+        .filter((tile) => basicTypes.has(improvementForTile(tile)))
+        .every((tile) => canImproveTile(tile).ok);
+      const advancedBeforeTech = [...tiles.values()]
+        .filter((tile) => !tile.improvement && !cityAt(tile.q, tile.r))
+        .some((tile) => ['lab', 'extractor', 'solar'].includes(improvementForTile(tile)) && !canImproveTile(tile).ok && /需要科技/.test(canImproveTile(tile).reason));
       state.completed.add('agriculture');
       state.completed.add('mining');
       state.completed.add('combustion');
@@ -387,7 +430,8 @@ test("worker build flow is blocked before tech and works after tech", () => {
       const assigned = assignWorkerBuild(worker, buildTile, true);
       const panel = renderTileSelection(buildTile);
       return {
-        blockedBeforeTech,
+        basicBeforeTech,
+        advancedBeforeTech,
         assigned,
         workerCharges: worker.charges,
         workerHasJob: !!worker.work,
@@ -398,7 +442,8 @@ test("worker build flow is blocked before tech and works after tech", () => {
       };
     })()`,
   );
-  assert.equal(result.blockedBeforeTech, true);
+  assert.equal(result.basicBeforeTech, true);
+  assert.equal(result.advancedBeforeTech, true);
   assert.equal(result.assigned, true);
   assert.equal(result.workerCharges, 5);
   assert.equal(result.workerHasJob, true);
