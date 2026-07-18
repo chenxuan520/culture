@@ -70,8 +70,8 @@ function tileYield(tile){
   return out;
 }
 function cityYield(city){
-  if(city.team!=='player'||city.allyAI)return{};const y={food:4,production:3,science:2,gold:5,energy:1};
-  if(city.capital){y.gold+=2;y.science+=1;}y.food+=Math.floor(city.population/3);
+  if(city.team!=='player'||city.allyAI)return{};const y={food:4,production:3,science:1,gold:5,energy:1};
+  if(city.capital)y.gold+=2;y.food+=Math.floor(city.population/3);
   if(hasBuilding(city,'granary'))y.food+=3;if(hasBuilding(city,'forge'))y.production+=2;if(hasBuilding(city,'academy'))y.science+=4;if(hasBuilding(city,'quantumRelay'))y.energy+=4;
   if(state.completed.has('agriculture'))y.food+=1;if(state.completed.has('singularity'))y.energy+=2;
   return y;

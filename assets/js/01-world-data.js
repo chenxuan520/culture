@@ -177,7 +177,7 @@ function freshState(started=false){
   const playerCity=createCity('player',layout.player.q,layout.player.r,true,'曙光城');
   const enemyCity=createCity('enemy',layout.enemy.q,layout.enemy.r,true,'灰烬要塞');
   const s={started,paused:false,gameOver:false,speed:1,simTime:0,pulseTimer:0,enemySpawnTimer:0,enemyThink:0,
-    resources:{food:92,production:72,science:42,gold:118,energy:32},lastYield:{food:0,production:0,science:0,gold:0,energy:0},
+    resources:{food:92,production:72,science:0,gold:118,energy:32},lastYield:{food:0,production:0,science:0,gold:0,energy:0},
     cities:[playerCity,enemyCity],units:[],effects:[],logs:[],completed:new Set(),research:null,aiTech:true,selection:{kind:'city',id:playerCity.id},
     hovered:null,showIntel:false,keys:new Set(),score:0,era:0,overdriveGlobal:0,uiTimer:0,uiHoldUntil:0,toastSeq:0,tutorialActive:false,tutorialRewarded:false,
     mapMode:currentMapConfig.mode,mapSeed:currentMapConfig.seed,mapSize:{width:mapWidth(),height:mapHeight()},

@@ -282,7 +282,7 @@ test("data definitions reference existing resources, techs, and products", () =>
   assert.deepEqual(plain(errors), []);
 });
 
-test("research pacing is not instant-unlock fast", () => {
+test("research starts at zero and default pulse adds one science", () => {
   const { context } = createHarness();
   const result = runInGame(
     context,
@@ -290,8 +290,11 @@ test("research pacing is not instant-unlock fast", () => {
       const cheapest = Math.min(...TECHS.map((tech) => tech.cost));
       const secondCheapest = TECHS.map((tech) => tech.cost).sort((a, b) => a - b)[1];
       const fastest = Math.min(...TECHS.map((tech) => tech.time));
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const pulseYield = cityYield(city);
       return {
         startingScience: state.resources.science,
+        pulseScience: pulseYield.science,
         cheapest,
         secondCheapest,
         fastest,
@@ -300,7 +303,9 @@ test("research pacing is not instant-unlock fast", () => {
       };
     })()`,
   );
-  assert.equal(result.canStartOne, true);
+  assert.equal(result.startingScience, 0);
+  assert.equal(result.pulseScience, 1);
+  assert.equal(result.canStartOne, false);
   assert.equal(result.cannotBuyTwo, true);
   assert.ok(result.fastest >= 8);
 });
@@ -327,7 +332,7 @@ test("starting production stockpile requires early development choices", () => {
   assert.deepEqual(plain(result.starting), {
     food: 92,
     production: 72,
-    science: 42,
+    science: 0,
     gold: 118,
     energy: 32,
   });
@@ -612,7 +617,7 @@ test("medium 1v1 spark enemy does not open with a full army or instant wave", ()
   assert.deepEqual(plain(result.start.resources), {
     food: 92,
     production: 72,
-    science: 42,
+    science: 0,
     gold: 118,
     energy: 32,
   });
@@ -626,7 +631,7 @@ test("enemy difficulty does not use starting resource or tech cheats", () => {
   const result = runInGame(
     context,
     `(() => {
-      const playerStart = { food: 92, production: 72, science: 42, gold: 118, energy: 32 };
+      const playerStart = { food: 92, production: 72, science: 0, gold: 118, energy: 32 };
       const states = Object.fromEntries(['easy', 'medium', 'hard'].map((difficulty) => {
         const s = freshState(true, difficulty, 'default', 0, 1, 'left', 'ash');
         state = s;
@@ -646,7 +651,7 @@ test("enemy difficulty does not use starting resource or tech cheats", () => {
       return { playerStart, states };
     })()`,
   );
-  const expectedStart = { food: 92, production: 72, science: 42, gold: 118, energy: 32 };
+  const expectedStart = { food: 92, production: 72, science: 0, gold: 118, energy: 32 };
   for (const difficulty of ["easy", "medium", "hard"]) {
     assert.deepEqual(plain(result.states[difficulty].resources), expectedStart);
     assert.deepEqual(plain(result.states[difficulty].techs), []);
