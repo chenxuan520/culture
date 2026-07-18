@@ -587,6 +587,54 @@ test("player faction selection changes player colors and units", () => {
   assert.equal(result.producedType, "raider");
 });
 
+test("ash combat roster is not using weak enemy-only tuning", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const spark = ['scout', 'warrior', 'archer', 'knight', 'tank', 'prism', 'kirov', 'quantumWalker'];
+      const ash = ['raider', 'enemyArcher', 'enemyBuggy', 'enemySiege', 'enemyDrone', 'enemyTitan'];
+      const costSum = (def) => Object.values(def.cost || {}).reduce((sum, value) => sum + value, 0);
+      const score = (id) => {
+        const def = UNIT_DEFS[id];
+        const dps = (def.attack || 0) / (def.interval || 1);
+        const rangeMul = 1 + Math.max(0, (def.range || 1) - 1) * 0.18;
+        const armorMul = 1 + (def.armor || 0) * 0.08;
+        const moveMul = 1 + Math.max(0, (def.move || 1) - 1) * 0.12;
+        const power = (def.hp || 1) * dps * rangeMul * armorMul * moveMul;
+        return {
+          id,
+          power,
+          perCost: power / Math.max(1, costSum(def)),
+          perProdSecond: power / Math.max(1, costSum(def) * def.time),
+        };
+      };
+      const average = (rows, key) => rows.reduce((sum, row) => sum + row[key], 0) / rows.length;
+      const sparkRows = spark.map(score);
+      const ashRows = ash.map(score);
+      const openingCombat = (faction) => freshState(true, 'medium', 'default', 0, 1, 'left', faction).units
+        .filter((unit) => unit.team === 'player' && unit.def.combat)
+        .map((unit) => score(unit.type));
+      const sparkOpening = openingCombat('spark');
+      const ashOpening = openingCombat('ash');
+      return {
+        avgCostRatio: average(ashRows, 'perCost') / average(sparkRows, 'perCost'),
+        avgProdRatio: average(ashRows, 'perProdSecond') / average(sparkRows, 'perProdSecond'),
+        openingPowerRatio: ashOpening.reduce((sum, row) => sum + row.power, 0) / sparkOpening.reduce((sum, row) => sum + row.power, 0),
+        ashWorkerHp: UNIT_DEFS.enemyWorker.hp,
+        sparkWorkerHp: UNIT_DEFS.worker.hp,
+        ashSettlerTime: UNIT_DEFS.enemySettler.time,
+        sparkSettlerTime: UNIT_DEFS.settler.time,
+      };
+    })()`,
+  );
+  assert.ok(result.avgCostRatio > 0.7, `ash cost efficiency ratio ${result.avgCostRatio}`);
+  assert.ok(result.avgProdRatio > 0.65, `ash production efficiency ratio ${result.avgProdRatio}`);
+  assert.ok(result.openingPowerRatio > 0.85, `ash opening power ratio ${result.openingPowerRatio}`);
+  assert.equal(result.ashWorkerHp, result.sparkWorkerHp);
+  assert.equal(result.ashSettlerTime, result.sparkSettlerTime);
+});
+
 test("ash player makes enemy AI produce spark units and support", () => {
   const { context } = createHarness();
   const result = runInGame(
