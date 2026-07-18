@@ -169,7 +169,7 @@ function canImproveTile(tile){
   if(tile.terrain==='water')return{ok:false,reason:'工人无法进入水域'};const tech=improvementTech(type);if(!hasTech(tech))return{ok:false,reason:`需要科技：${techById(tech)?.name||tech}`};return{ok:true,type};
 }
 function assignWorkerBuild(unit,tile,manual=false){
-  if(unit.type!=='worker'||unit.team!=='player')return false;
+  if((unit.type!=='worker'&&unit.type!=='enemyWorker')||unit.team!=='player')return false;
   if(unit.charges<=0){if(manual)toast('这个工人的建设次数已经用完。','warn');return false;}
   const check=canImproveTile(tile);if(!check.ok){if(manual)toast(check.reason,'warn');return false;}
   const reserved=state.units.some(u=>u.id!==unit.id&&u.work&&u.work.q===tile.q&&u.work.r===tile.r);if(reserved){if(manual)toast('已经有工人在处理这个地块。','warn');return false;}
@@ -204,8 +204,8 @@ function healNearby(unit,dt){
 }
 function updateWorkers(dt){
   for(const u of [...state.units]){
-    if(u.hp<=0||u.team!=='player'||(u.type!=='worker'&&u.type!=='repairDrone'))continue;healNearby(u,dt);
-    if(u.type!=='worker')continue;
+    if(u.hp<=0||u.team!=='player'||(u.type!=='worker'&&u.type!=='enemyWorker'&&u.type!=='repairDrone'))continue;healNearby(u,dt);
+    if(u.type!=='worker'&&u.type!=='enemyWorker')continue;
     u.aiThink=(u.aiThink||0)-dt;
     if(u.work){
       const w=u.work,t=tileAt(w.q,w.r);if(!t||t.improvement){u.work=null;continue;}

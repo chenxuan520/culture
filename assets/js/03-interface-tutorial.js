@@ -30,14 +30,14 @@ function renderUnitSelection(u){
   if(u.route.length)badges+=badge(`路线 ${u.route.length} 格`,'cyan');if(locked)badges+=badge(`🎯 锁定：${targetName(u.target)}`,'danger');if(u.combatGlow>0)badges+=badge('⚔️ 交战周期中','warn');
   if(formation>1)badges+=badge(`混编加成 ×${formation.toFixed(2)}`,'good');if(net>=2)badges+=badge(`光棱组网 ${net} 辆`,'cyan');if(u.overdrive>0)badges+=badge(`⚡ 强化 ${u.overdrive.toFixed(1)}s`,'warn');
   if(u.holdPosition)badges+=badge('🛡️ 驻守当前格','warn');
-  if(u.type==='worker')badges+=badge(`建设次数 ${u.charges}/5`,u.charges>1?'good':'warn');
+  if(u.type==='worker'||u.type==='enemyWorker')badges+=badge(`建设次数 ${u.charges}/5`,u.charges>1?'good':'warn');
   let html=`<div class="card"><div class="hero"><div class="heroIcon">${u.def.icon}</div><div><h2>${u.name}</h2><p>${u.def.desc||'灰烬军团作战单位。'}</p>${healthBar(u.hp,u.maxHp)}</div></div><div class="badges">${badges}</div><div class="stats">${stat('攻击',u.def.attack||0)}${stat('射程',(u.def.range||0)+' 格')}${stat('移动',u.def.move.toFixed(2)+' 格/s')}${stat('攻击周期',(u.def.interval||0).toFixed(2)+'s')}</div>`;
   if(u.work){const imp=IMPROVEMENTS[u.work.type],pct=u.work.progress/u.work.time*100;html+=`<div class="sub">当前工程 <span>${u.work.building?'建设中':'前往工地'}</span></div><div class="queueItem"><div class="qIcon">${imp.icon}</div><div><b>${imp.name}</b><small>目标 ${u.work.q},${u.work.r}</small><div class="progress"><div class="fill" style="width:${pct}%"></div></div></div><span class="small muted">${Math.max(0,u.work.time-u.work.progress).toFixed(1)}s</span></div>`;}
   if(u.team==='player'){
-    if(u.type==='worker')html+=`<div class="switchRow" data-worker-ai-row><div><b>🤖 工人 AI 模式</b><p>自动寻找附近未开发资源，并按地形连续建设。</p></div><label class="toggle"><input type="checkbox" data-worker-ai ${u.aiWorker?'checked':''}><span></span></label></div>`;
+    if(u.type==='worker'||u.type==='enemyWorker')html+=`<div class="switchRow" data-worker-ai-row><div><b>🤖 工人 AI 模式</b><p>自动寻找附近未开发资源，并按地形连续建设。</p></div><label class="toggle"><input type="checkbox" data-worker-ai ${u.aiWorker?'checked':''}><span></span></label></div>`;
     html+=`<div class="sub">单位命令 <span>选中后左键地图规划路线</span></div><div class="actions">`;
-    if(u.type==='worker'){const here=tileAt(u.q,u.r),check=canImproveTile(here);html+=`<button class="action ${check.ok?'good':'blocked'}" data-action="build-here" ${check.ok?'':`data-blocked="${check.reason}" aria-disabled="true"`}>${check.ok?`🏗️ 建设${IMPROVEMENTS[check.type].name}`:`🏗️ 不能建设：${check.reason}`}</button>`;}
-    if(u.type==='settler')html+=`<button class="action good full" data-action="found-city">🏠 在当前地块建立城市</button>`;
+    if(u.type==='worker'||u.type==='enemyWorker'){const here=tileAt(u.q,u.r),check=canImproveTile(here);html+=`<button class="action ${check.ok?'good':'blocked'}" data-action="build-here" ${check.ok?'':`data-blocked="${check.reason}" aria-disabled="true"`}>${check.ok?`🏗️ 建设${IMPROVEMENTS[check.type].name}`:`🏗️ 不能建设：${check.reason}`}</button>`;}
+    if(u.type==='settler'||u.type==='enemySettler')html+=`<button class="action good full" data-action="found-city">🏠 在当前地块建立城市</button>`;
     if(u.def.combat)html+=`<button class="action warn" data-action="overdrive">⚡ 短时强化（消耗25能量）</button>`;
     if(u.def.combat)html+=`<button class="action" data-action="toggle-hold">${u.holdPosition?'🟢 恢复自动索敌':'🛡️ 驻守当前格'}</button>`;
     html+=`<button class="action" data-action="stop-unit">⏹ 停止并解除锁定</button><button class="action" data-action="center-selection">🎯 镜头居中</button></div>`;
@@ -67,7 +67,7 @@ function renderCitySelection(c){
 }
 function renderTileSelection(t){
   const terrain=TERRAIN[t.terrain],res=t.resource?RESOURCE_DEFS[t.resource]:null,imp=t.improvement?IMPROVEMENTS[t.improvement.type]:null,city=cityAt(t.q,t.r),y=tileYield(t),check=canImproveTile(t);
-  const workerJob=state.units.find(u=>u.team==='player'&&u.type==='worker'&&u.work&&u.work.q===t.q&&u.work.r===t.r);
+  const workerJob=state.units.find(u=>u.team==='player'&&(u.type==='worker'||u.type==='enemyWorker')&&u.work&&u.work.q===t.q&&u.work.r===t.r);
   const displayYield=imp?y:res?res.yield:{};
   let tags=badge(`${terrain.icon} ${terrain.name}`,'cyan');if(res)tags+=badge(`${res.icon} ${res.name}`,'warn');if(imp)tags+=badge(`${imp.icon} 已开发`,'good');if(t.ruin)tags+=badge('✨ 星火遗迹','warn');if(city?.capital)tags+=badge('主城禁建额外设施','danger');
   const status=imp?'已建成：下方产出已经计入每次资源脉冲':workerJob?`${workerJob.work.building?'建设中':'工人前往中'}：${Math.max(0,workerJob.work.time-workerJob.work.progress).toFixed(1)} 秒左右完成`:res?'未建成：先派工人开发，完成后才会产出':'普通地块：可按地形建设基础设施';
@@ -84,7 +84,7 @@ function renderTileSelection(t){
 function renderSelection(){
   const obj=selectedObject();if(!obj){$('selKind').textContent='等待选择';$('selection').innerHTML='<div class="card empty">点击城市、单位或资源地块查看详情。<br>选择己方单位后，左键地图下达持续路线命令；右键取消选择。</div>';return;}
   if(state.selection.kind==='unit'){$('selKind').textContent=obj.team==='player'?'己方单位':'敌方目标';$('selection').innerHTML=renderUnitSelection(obj);}
-  else if(state.selection.kind==='units'){const units=state.selection.ids.map(unitById).filter(Boolean),combat=units.filter(u=>u.def.combat).length,workers=units.filter(u=>u.type==='worker').length;$('selKind').textContent='多选编队';$('selection').innerHTML=`<div class="card"><div class="hero"><div class="heroIcon">⬚</div><div><h2>${units.length} 个己方单位</h2><p>左键地图让整队移动；左键敌人让可战斗单位攻击；按 A 会对当前鼠标指向执行同样命令。</p></div></div><div class="stats">${stat('战斗单位',combat)}${stat('工人',workers)}${stat('路线中',units.filter(u=>u.route.length).length)}${stat('锁定目标',units.filter(u=>u.target).length)}</div><div class="actions"><button class="action" data-action="stop-unit">⏹ 停止整队</button></div></div>`;}
+  else if(state.selection.kind==='units'){const units=state.selection.ids.map(unitById).filter(Boolean),combat=units.filter(u=>u.def.combat).length,workers=units.filter(u=>u.type==='worker'||u.type==='enemyWorker').length;$('selKind').textContent='多选编队';$('selection').innerHTML=`<div class="card"><div class="hero"><div class="heroIcon">⬚</div><div><h2>${units.length} 个己方单位</h2><p>左键地图让整队移动；左键敌人让可战斗单位攻击；按 A 会对当前鼠标指向执行同样命令。</p></div></div><div class="stats">${stat('战斗单位',combat)}${stat('工人',workers)}${stat('路线中',units.filter(u=>u.route.length).length)}${stat('锁定目标',units.filter(u=>u.target).length)}</div><div class="actions"><button class="action" data-action="stop-unit">⏹ 停止整队</button></div></div>`;}
   else if(state.selection.kind==='city'){$('selKind').textContent=obj.team==='player'?'城市管理':'敌方要塞';$('selection').innerHTML=renderCitySelection(obj);}
   else{$('selKind').textContent=obj.improvement?'资源设施':'地图地块';$('selection').innerHTML=renderTileSelection(obj);}
 }
@@ -96,10 +96,10 @@ function renderLogs(){$('logList').innerHTML=state.logs.map(l=>`<div class="logL
 function renderPanels(){renderTop();renderResearchPanel();renderSelection();renderGlobal();renderLogs();}
 
 function centerOn(q,r){const p=axialToWorld(q,r);state.camera.x=p.x;state.camera.y=p.y;}
-function stopUnit(u){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;if(u.type==='worker')u.work=null;toast(`${u.def.name} 已停止当前命令。`);renderPanels();}
+function stopUnit(u){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;if(u.type==='worker'||u.type==='enemyWorker')u.work=null;toast(`${u.def.name} 已停止当前命令。`);renderPanels();}
 function toggleHoldPosition(u){if(!u?.def?.combat||u.team!=='player')return;u.holdPosition=!u.holdPosition;if(u.holdPosition){u.route=[];u.moveProgress=0;u.target=null;u.manualTarget=false;toast(`${u.def.name} 将驻守当前格，不再主动追击。`,'good');}else toast(`${u.def.name} 恢复自动索敌。`,'good');renderPanels();}
 function dispatchNearestWorker(tile){
-  const workers=state.units.filter(u=>u.team==='player'&&u.type==='worker'&&u.charges>0&&!u.work).sort((a,b)=>hexDistance(a,tile)-hexDistance(b,tile));
+  const workers=state.units.filter(u=>u.team==='player'&&(u.type==='worker'||u.type==='enemyWorker')&&u.charges>0&&!u.work).sort((a,b)=>hexDistance(a,tile)-hexDistance(b,tile));
   for(const u of workers)if(assignWorkerBuild(u,tile,true)){state.selection={kind:'unit',id:u.id};renderPanels();return;}
   toast(workers.length?'没有工人能走到这个地块。':'没有空闲且有建设次数的工人。','warn');
 }
@@ -109,7 +109,7 @@ function destroyResource(tile){if(!tile.resource)return;const n=RESOURCE_DEFS[ti
 $('techTree').addEventListener('click',e=>{const b=e.target.closest('[data-tech]');if(b){if(tutorial.active)tutorial.flags.researchChoiceTouched=true;startResearch(b.dataset.tech,false);}});
 $('aiTech').addEventListener('change',e=>{if(tutorial.active)tutorial.flags.researchChoiceTouched=true;state.aiTech=e.target.checked;if(state.aiTech)chooseAIResearch();renderPanels();toast(state.aiTech?'🤖 AI 科研助理已开启。':'AI 科研助理已关闭。');});
 $('selection').addEventListener('change',e=>{
-  if(!e.target.matches('[data-worker-ai]'))return;const u=selectedObject();if(u?.type!=='worker')return;
+  if(!e.target.matches('[data-worker-ai]'))return;const u=selectedObject();if(u?.type!=='worker'&&u?.type!=='enemyWorker')return;
   u.aiWorker=e.target.checked;if(u.aiWorker&&!u.work)chooseWorkerTask(u);toast(u.aiWorker?'🤖 工人 AI 已开启。':'工人 AI 已关闭。');renderPanels();
 });
 $('selection').addEventListener('click',e=>{
@@ -117,9 +117,9 @@ $('selection').addEventListener('click',e=>{
   const product=e.target.closest('[data-product]');if(product){const c=selectedObject();if(c?.allyAI){toast('盟友城市使用自己的资源和队列，不能用你的资源手动下单。','warn');return;}if(c)queueProduct(c,product.dataset.product);return;}
   const cancel=e.target.closest('[data-cancel]');if(cancel){const c=selectedObject();if(c)cancelQueue(c,cancel.dataset.cancel);return;}
   const action=e.target.closest('[data-action]');if(!action)return;if(action.dataset.blocked){toast(action.dataset.blocked,'warn');return;}const obj=selectedObject(),a=action.dataset.action;
-  if(a==='toggle-worker-ai'&&obj?.type==='worker'){obj.aiWorker=!obj.aiWorker;if(obj.aiWorker&&!obj.work)chooseWorkerTask(obj);toast(obj.aiWorker?'🤖 工人 AI 已开启。':'工人 AI 已关闭。');renderPanels();}
-  else if(a==='build-here'&&obj?.type==='worker')assignWorkerBuild(obj,tileAt(obj.q,obj.r),true);
-  else if(a==='found-city'&&obj?.type==='settler')foundCity(obj);
+  if(a==='toggle-worker-ai'&&(obj?.type==='worker'||obj?.type==='enemyWorker')){obj.aiWorker=!obj.aiWorker;if(obj.aiWorker&&!obj.work)chooseWorkerTask(obj);toast(obj.aiWorker?'🤖 工人 AI 已开启。':'工人 AI 已关闭。');renderPanels();}
+  else if(a==='build-here'&&(obj?.type==='worker'||obj?.type==='enemyWorker'))assignWorkerBuild(obj,tileAt(obj.q,obj.r),true);
+  else if(a==='found-city'&&(obj?.type==='settler'||obj?.type==='enemySettler'))foundCity(obj);
   else if(a==='overdrive'&&obj?.def?.combat)activateOverdrive(obj);
   else if(a==='toggle-hold'&&obj?.def?.combat)toggleHoldPosition(obj);
   else if(a==='stop-unit'&&state.selection?.kind==='units'){for(const u of state.selection.ids.map(unitById).filter(Boolean))stopUnit(u);renderPanels();}
@@ -148,7 +148,7 @@ const TUTORIAL_STEPS=[
 ];
 function tutorialSelected(type){
   if(type==='city')return state.cities.find(c=>c.team==='player'&&c.capital&&c.hp>0);
-  if(type==='worker')return state.units.find(u=>u.team==='player'&&u.type==='worker'&&u.hp>0);
+  if(type==='worker')return state.units.find(u=>u.team==='player'&&(u.type==='worker'||u.type==='enemyWorker')&&u.hp>0);
   if(type==='warrior')return state.units.find(u=>u.team==='player'&&u.def.combat&&u.hp>0);
   return null;
 }
@@ -157,7 +157,7 @@ function tutorialTaskDone(step=TUTORIAL_STEPS[tutorial.step]){
   if(step.check==='queue')done=state.cities.some(c=>c.team==='player'&&c.queue.length>0);
   else if(step.check==='research')done=!!state.research||state.completed.size>0||state.aiTech;
   else if(step.check==='route')done=state.units.some(u=>u.team==='player'&&u.route.length>0);
-  else if(step.check==='workerAI')done=state.units.some(u=>u.team==='player'&&u.type==='worker'&&u.aiWorker);
+  else if(step.check==='workerAI')done=state.units.some(u=>u.team==='player'&&(u.type==='worker'||u.type==='enemyWorker')&&u.aiWorker);
   else if(step.check==='speed')done=!!(tutorial.flags.speedTouched||tutorial.flags.pauseTouched||Math.abs(state.speed-1)>.001);
   else if(step.check==='view')done=!!tutorial.flags.viewAction;
   if(done)tutorial.flags.completed[step.check]=true;return done;

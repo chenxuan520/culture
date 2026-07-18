@@ -400,7 +400,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
         difficultyHint: $('difficultyHint').textContent,
         skirmishHint: $('skirmishHint').textContent,
         mapMode: $('mapModeSelect').value,
-        enemyFaction: $('enemyFactionSelect').value,
+        playerFaction: $('playerFactionSelect').value,
         playerSide: $('playerSideSelect').value,
         leftAI: $('leftAISlots').value,
         rightAI: $('rightAISlots').value,
@@ -413,9 +413,9 @@ test("settings/help panels and intro difficulty text are wired", () => {
   );
   assert.match(result.introDifficulty, /中等/);
   assert.match(result.difficultyHint, /中等/);
-  assert.match(result.skirmishHint, /默认地图 · 敌方灰烬军团 · 左侧开局 · 1v1/);
+  assert.match(result.skirmishHint, /默认地图 · 星火联盟 · 左侧开局 · 1v1/);
   assert.equal(result.mapMode, "default");
-  assert.equal(result.enemyFaction, "rbp");
+  assert.equal(result.playerFaction, "spark");
   assert.equal(result.playerSide, "left");
   assert.equal(result.leftAI, "0");
   assert.equal(result.rightAI, "1");
@@ -509,22 +509,24 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.ok(result.area >= 840);
 });
 
-test("enemy faction selection swaps controlled color team", () => {
+test("player faction selection changes player colors and units", () => {
   const { context } = createHarness();
   const result = runInGame(
     context,
     `(() => {
-      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right', 'bgy');
+      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right', 'ash');
       state = rightStart;
       const playerCapital = rightStart.cities.find((city) => city.team === 'player' && city.capital);
       const enemyCapital = rightStart.cities.find((city) => city.team === 'enemy' && city.capital);
       const allyFactions = rightStart.cities.filter((city) => city.allyAI).map((city) => city.faction);
       const enemyFactions = rightStart.cities.filter((city) => city.team === 'enemy').map((city) => city.faction);
+      const mainUnits = rightStart.units.filter((unit) => unit.team === 'player' && !unit.allyAI).map((unit) => unit.type);
+      const allyUnits = rightStart.units.filter((unit) => unit.team === 'player' && unit.allyAI).map((unit) => unit.type);
       const factionColors = window.__STARFIRE_DEBUG__.factions();
       const city = rightStart.cities.find((item) => item.team === 'player' && item.capital);
       const before = rightStart.units.length;
-      completeProduct(city, { id: 'warrior' });
-      const produced = rightStart.units.slice(before).find((unit) => unit.type === 'warrior');
+      completeProduct(city, { id: 'raider' });
+      const produced = rightStart.units.slice(before).find((unit) => unit.type === 'raider');
       const colorKeys = ['blue', 'green', 'yellow', 'red', 'black', 'purple'];
       const rgb = (hex) => {
         const raw = hex.replace('#', '');
@@ -536,32 +538,44 @@ test("enemy faction selection swaps controlled color team", () => {
       };
       return {
         playerSide: rightStart.playerSide,
-        stateEnemyFaction: rightStart.enemyFaction,
+        statePlayerFaction: rightStart.playerFaction,
         playerMapSide: rightStart.playerMapSide,
         enemyMapSide: rightStart.enemyMapSide,
         playerRightOfEnemy: playerCapital.q > enemyCapital.q,
+        playerCapitalName: playerCapital.name,
+        enemyCapitalName: enemyCapital.name,
         playerFaction: playerCapital.faction,
         allyFactions,
         enemyFactions,
+        mainUnits,
+        allyUnits,
+        roster: PRODUCT_IDS.slice(0, 8),
         distinctStrokes: new Set(colorKeys.map((key) => factionColors[key].stroke)).size,
         closePairs: colorKeys.flatMap((a, i) => colorKeys.slice(i + 1).map((b) => [a, b, colorDistance(a, b)])).filter((item) => item[2] < 90),
         allColorsExist: colorKeys.every((key) => !!factionColors[key]),
         producedFaction: produced && produced.faction,
+        producedType: produced && produced.type,
       };
     })()`,
   );
   assert.equal(result.playerSide, "right");
-  assert.equal(result.stateEnemyFaction, "bgy");
+  assert.equal(result.statePlayerFaction, "ash");
   assert.equal(result.playerFaction, "red");
   assert.equal(result.playerMapSide, "enemy");
   assert.equal(result.enemyMapSide, "player");
   assert.equal(result.playerRightOfEnemy, true);
+  assert.equal(result.playerCapitalName, "灰烬要塞");
+  assert.equal(result.enemyCapitalName, "曙光城");
   assert.deepEqual(plain(result.allyFactions), ["black", "purple"]);
   assert.deepEqual(plain(result.enemyFactions), ["blue", "green", "yellow"]);
+  assert.deepEqual(plain(result.mainUnits.sort()), ["enemyArcher", "enemyWorker", "raider"].sort());
+  assert.deepEqual(plain(result.allyUnits.sort()), ["enemyArcher", "enemyArcher", "enemyWorker", "enemyWorker"].sort());
+  assert.deepEqual(plain(result.roster), ["enemyWorker", "enemySettler", "raider", "enemyArcher", "enemyBuggy", "enemySiege", "enemyDrone", "enemyTitan"]);
   assert.equal(result.distinctStrokes, 6);
   assert.deepEqual(plain(result.closePairs), []);
   assert.equal(result.allColorsExist, true);
   assert.equal(result.producedFaction, "red");
+  assert.equal(result.producedType, "raider");
 });
 
 test("ally AI uses independent economy instead of player resources", () => {
