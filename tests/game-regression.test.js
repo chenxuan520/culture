@@ -1,0 +1,399 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const ROOT = path.resolve(__dirname, "..");
+const JS_FILES = [
+  "assets/js/01-world-data.js",
+  "assets/js/02-simulation.js",
+  "assets/js/03-interface-tutorial.js",
+  "assets/js/04-rendering.js",
+  "assets/js/05-bootstrap.js",
+  "assets/js/06-enhancements.js",
+  "assets/js/07-map-interactions.js",
+];
+
+function makeElement(id = "") {
+  return {
+    id,
+    textContent: "",
+    innerHTML: "",
+    value: "1",
+    checked: false,
+    dataset: {},
+    style: {},
+    children: [],
+    firstElementChild: null,
+    classList: {
+      classes: new Set(),
+      add(...items) {
+        items.forEach((item) => this.classes.add(item));
+      },
+      remove(...items) {
+        items.forEach((item) => this.classes.delete(item));
+      },
+      toggle(item, force) {
+        const shouldAdd = force === undefined ? !this.classes.has(item) : !!force;
+        if (shouldAdd) this.classes.add(item);
+        else this.classes.delete(item);
+      },
+      contains(item) {
+        return this.classes.has(item);
+      },
+    },
+    addEventListener() {},
+    dispatchEvent() {},
+    querySelector() {
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    setAttribute() {},
+    getBoundingClientRect() {
+      return { left: 0, top: 0, right: 100, bottom: 100, width: 100, height: 100 };
+    },
+    focus() {},
+    remove() {},
+    closest() {
+      return null;
+    },
+  };
+}
+
+function makeCanvasContext() {
+  const gradient = { addColorStop() {} };
+  return {
+    setTransform() {},
+    clearRect() {},
+    fillRect() {},
+    strokeRect() {},
+    beginPath() {},
+    arc() {},
+    fill() {},
+    stroke() {},
+    moveTo() {},
+    lineTo() {},
+    closePath() {},
+    save() {},
+    restore() {},
+    translate() {},
+    rotate() {},
+    fillText() {},
+    strokeText() {},
+    createLinearGradient() {
+      return gradient;
+    },
+    createRadialGradient() {
+      return gradient;
+    },
+    measureText() {
+      return { width: 0 };
+    },
+    setLineDash() {},
+    drawImage() {},
+    rect() {},
+    clip() {},
+  };
+}
+
+function createHarness() {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const ids = new Map();
+  for (const match of html.matchAll(/id="([^"]+)"/g)) ids.set(match[1], makeElement(match[1]));
+
+  const ctx2d = makeCanvasContext();
+  const canvasElement = (id) => ({
+    ...makeElement(id),
+    getContext() {
+      return ctx2d;
+    },
+    setPointerCapture() {},
+    hasPointerCapture() {
+      return false;
+    },
+    releasePointerCapture() {},
+    getBoundingClientRect() {
+      return { left: 0, top: 0, width: 1000, height: 700, right: 1000, bottom: 700 };
+    },
+  });
+  ids.set("game", canvasElement("game"));
+  ids.set("mini", canvasElement("mini"));
+
+  const timeoutQueue = [];
+  const document = {
+    getElementById(id) {
+      if (!ids.has(id)) ids.set(id, makeElement(id));
+      return ids.get(id);
+    },
+    querySelector() {
+      return makeElement();
+    },
+    querySelectorAll(selector) {
+      if (selector === "[data-difficulty]") {
+        return ["easy", "medium", "hard"].map((difficulty) => {
+          const element = makeElement();
+          element.dataset = { difficulty };
+          return element;
+        });
+      }
+      return [];
+    },
+    addEventListener() {},
+    createElement() {
+      return makeElement();
+    },
+  };
+  const window = {
+    addEventListener() {},
+    AudioContext: null,
+    webkitAudioContext: null,
+    __STARFIRE_DEBUG__: {},
+  };
+  const context = {
+    console,
+    Math,
+    Date,
+    Set,
+    Map,
+    WeakMap,
+    Array,
+    Object,
+    Number,
+    String,
+    Boolean,
+    RegExp,
+    JSON,
+    Error,
+    performance: { now: () => 0 },
+    setTimeout(fn) {
+      timeoutQueue.push(fn);
+      return timeoutQueue.length;
+    },
+    clearTimeout() {},
+    setInterval() {
+      return 0;
+    },
+    clearInterval() {},
+    requestAnimationFrame() {},
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+      removeItem() {},
+    },
+    document,
+    window,
+    globalThis: null,
+    Event: function Event(type) {
+      this.type = type;
+    },
+  };
+  context.globalThis = context;
+  window.window = window;
+  window.document = document;
+  window.globalThis = context;
+
+  vm.createContext(context);
+  for (const file of JS_FILES) {
+    vm.runInContext(fs.readFileSync(path.join(ROOT, file), "utf8"), context, { filename: file });
+  }
+  while (timeoutQueue.length) timeoutQueue.shift()();
+
+  return { context, ids, html };
+}
+
+function runInGame(context, source) {
+  return vm.runInContext(source, context);
+}
+
+function plain(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`ok - ${name}`);
+  } catch (error) {
+    console.error(`not ok - ${name}`);
+    throw error;
+  }
+}
+
+test("all DOM ids referenced by $() exist", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const ids = new Set([...html.matchAll(/id="([^"]+)"/g)].map((match) => match[1]));
+  const missing = [];
+  for (const file of JS_FILES) {
+    const source = fs.readFileSync(path.join(ROOT, file), "utf8");
+    for (const match of source.matchAll(/\$\('([^']+)'\)/g)) {
+      if (!ids.has(match[1])) missing.push(`${file}: #${match[1]}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});
+
+test("HTML loads scripts in dependency order and all assets exist", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(scripts, JS_FILES);
+  const refs = [
+    ...scripts,
+    ...[...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((match) => match[1]),
+  ];
+  assert.deepEqual(
+    refs.filter((ref) => !fs.existsSync(path.join(ROOT, ref))),
+    [],
+  );
+});
+
+test("data definitions reference existing resources, techs, and products", () => {
+  const { context } = createHarness();
+  const errors = runInGame(
+    context,
+    `(() => {
+      const knownResources = new Set(RESOURCE_KEYS);
+      const knownTech = new Set(TECHS.map((tech) => tech.id));
+      const knownProducts = new Set([...Object.keys(UNIT_DEFS), ...Object.keys(BUILDING_DEFS)]);
+      const errors = [];
+      for (const tech of TECHS) for (const pre of tech.pre) if (!knownTech.has(pre)) errors.push('missing tech pre ' + tech.id + ' -> ' + pre);
+      for (const [id, def] of Object.entries(UNIT_DEFS)) if (def.tech && !knownTech.has(def.tech)) errors.push('unit bad tech ' + id);
+      for (const [id, def] of Object.entries(BUILDING_DEFS)) if (def.tech && !knownTech.has(def.tech)) errors.push('building bad tech ' + id);
+      for (const id of PRODUCT_IDS) if (!knownProducts.has(id)) errors.push('bad product ' + id);
+      for (const [group, defs] of [['unit', UNIT_DEFS], ['building', BUILDING_DEFS], ['improvement', IMPROVEMENTS], ['resource', RESOURCE_DEFS]]) {
+        for (const [id, def] of Object.entries(defs)) {
+          for (const bag of ['cost', 'yield']) {
+            for (const key of Object.keys(def[bag] || {})) if (!knownResources.has(key)) errors.push(group + ' ' + id + ' bad ' + bag + ' ' + key);
+          }
+        }
+      }
+      return errors;
+    })()`,
+  );
+  assert.deepEqual(plain(errors), []);
+});
+
+test("enhanced worker initialization keeps player workers usable", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const initial = state.units.find((unit) => unit.team === 'player' && unit.type === 'worker');
+      const made = createUnit('worker', 'player', 3, 8, { aiWorker: false });
+      const enemy = createUnit('enemyWorker', 'enemy', 10, 10);
+      return {
+        initialCharges: initial.charges,
+        initialAI: initial.aiWorker,
+        madeCharges: made.charges,
+        madeAI: made.aiWorker,
+        enemyCharges: enemy.charges,
+        enemyAI: enemy.aiWorker
+      };
+    })()`,
+  );
+  assert.deepEqual(plain(result), {
+    initialCharges: 5,
+    initialAI: false,
+    madeCharges: 5,
+    madeAI: false,
+    enemyCharges: 5,
+    enemyAI: true,
+  });
+});
+
+test("worker build flow is blocked before tech and works after tech", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const worker = state.units.find((unit) => unit.team === 'player' && unit.type === 'worker');
+      const blockedBeforeTech = [...tiles.values()]
+        .filter((tile) => !tile.improvement && !cityAt(tile.q, tile.r))
+        .some((tile) => !canImproveTile(tile).ok && /需要科技|工人无法|暂无/.test(canImproveTile(tile).reason));
+      state.completed.add('agriculture');
+      state.completed.add('mining');
+      state.completed.add('combustion');
+      state.completed.add('electricity');
+      const buildTile = [...tiles.values()].find((tile) => canImproveTile(tile).ok && findPath(worker, { q: worker.q, r: worker.r }, tile).length);
+      const assigned = assignWorkerBuild(worker, buildTile, true);
+      const panel = renderTileSelection(buildTile);
+      return {
+        blockedBeforeTech,
+        assigned,
+        workerCharges: worker.charges,
+        workerHasJob: !!worker.work,
+        jobQ: worker.work && worker.work.q,
+        jobR: worker.work && worker.work.r,
+        busyPanelBlocked: panel.includes('data-blocked="已经有工人在处理这个地块"'),
+        busyPanelStillGreen: panel.includes('action good full" data-action="dispatch-worker"'),
+      };
+    })()`,
+  );
+  assert.equal(result.blockedBeforeTech, true);
+  assert.equal(result.assigned, true);
+  assert.equal(result.workerCharges, 5);
+  assert.equal(result.workerHasJob, true);
+  assert.equal(typeof result.jobQ, "number");
+  assert.equal(typeof result.jobR, "number");
+  assert.equal(result.busyPanelBlocked, true);
+  assert.equal(result.busyPanelStillGreen, false);
+});
+
+test("manual combat commands target enemy improvements and movement clears hold", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const soldier = state.units.find((unit) => unit.team === 'player' && unit.def.combat);
+      const targetTile = [...tiles.values()].find((tile) => !tile.improvement && isLand(tile) && !cityAt(tile.q, tile.r));
+      targetTile.improvement = { type: 'mine', team: 'enemy', hp: 100, maxHp: 100 };
+      setLockedTarget(soldier, { kind: 'improvement', obj: targetTile.improvement, tile: targetTile, q: targetTile.q, r: targetTile.r, team: 'enemy' }, true);
+      const targetKind = resolveTarget(soldier.target)?.kind;
+      soldier.holdPosition = true;
+      setUnitRoute(soldier, soldier.q, soldier.r, true);
+      return { targetKind, holdPosition: soldier.holdPosition };
+    })()`,
+  );
+  assert.deepEqual(plain(result), { targetKind: "improvement", holdPosition: false });
+});
+
+test("settings/help panels and intro difficulty text are wired", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      renderPanels();
+      return {
+        introDifficulty: $('introDifficultyDesc').textContent,
+        difficultyHint: $('difficultyHint').textContent,
+        settingsFn: typeof window.toggleSettingsPanel,
+        helpFn: typeof window.toggleHelpPanel,
+      };
+    })()`,
+  );
+  assert.match(result.introDifficulty, /中等/);
+  assert.match(result.difficultyHint, /中等/);
+  assert.equal(result.settingsFn, "function");
+  assert.equal(result.helpFn, "function");
+});
+
+test("map generation does not create undevelopable water resources", () => {
+  const { context } = createHarness();
+  const ok = runInGame(context, `[...tiles.values()].every((tile) => tile.terrain !== 'water' || !tile.resource)`);
+  assert.equal(ok, true);
+});
+
+test("visible docs do not contain removed terminology", () => {
+  const files = ["index.html", "assets/js/03-interface-tutorial.js"];
+  const text = files.map((file) => fs.readFileSync(path.join(ROOT, file), "utf8")).join("\n");
+  assert.equal(/超载|试听|左上角/.test(text), false);
+});
