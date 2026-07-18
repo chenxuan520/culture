@@ -64,13 +64,13 @@ function improvementForTile(tile){
   if(tile.terrain==='forest')return'lumber';if(tile.terrain==='hills')return'mine';if(tile.terrain==='desert')return'solar';if(tile.terrain==='grass'||tile.terrain==='plains')return'farm';return null;
 }
 function tileYield(tile){
-  const out={};if(!tile?.improvement||tile.improvement.team!=='player')return out;
+  const out={};if(!tile?.improvement||tile.improvement.team!=='player'||tile.improvement.owner==='ally')return out;
   const imp=IMPROVEMENTS[tile.improvement.type];for(const[k,v]of Object.entries(imp.yield||{}))out[k]=(out[k]||0)+v;
   if(tile.resource){for(const[k,v]of Object.entries(RESOURCE_DEFS[tile.resource].yield||{}))out[k]=(out[k]||0)+v;}
   return out;
 }
 function cityYield(city){
-  if(city.team!=='player')return{};const y={food:4,production:3,science:2,gold:5,energy:1};
+  if(city.team!=='player'||city.allyAI)return{};const y={food:4,production:3,science:2,gold:5,energy:1};
   if(city.capital){y.gold+=2;y.science+=1;}y.food+=Math.floor(city.population/3);
   if(hasBuilding(city,'granary'))y.food+=3;if(hasBuilding(city,'forge'))y.production+=2;if(hasBuilding(city,'academy'))y.science+=4;if(hasBuilding(city,'quantumRelay'))y.energy+=4;
   if(state.completed.has('agriculture'))y.food+=1;if(state.completed.has('singularity'))y.energy+=2;
@@ -78,7 +78,7 @@ function cityYield(city){
 }
 function calculateYield(){
   const total={food:0,production:0,science:0,gold:0,energy:0};
-  for(const c of state.cities)if(c.hp>0)for(const[k,v]of Object.entries(cityYield(c)))total[k]+=v;
+  for(const c of state.cities)if(c.hp>0&&!c.allyAI)for(const[k,v]of Object.entries(cityYield(c)))total[k]+=v;
   for(const t of tiles.values())for(const[k,v]of Object.entries(tileYield(t)))total[k]+=v;
   return total;
 }
@@ -189,7 +189,7 @@ function chooseWorkerTask(unit){
 }
 function finishWorkerBuild(unit){
   const w=unit.work,t=tileAt(w.q,w.r);if(!t||t.improvement){unit.work=null;return;}
-  const def=IMPROVEMENTS[w.type];t.improvement={type:w.type,team:'player',hp:def.hp,maxHp:def.hp};unit.charges--;unit.work=null;
+  const def=IMPROVEMENTS[w.type];t.improvement={type:w.type,team:'player',owner:unit.allyAI?'ally':'player',hp:def.hp,maxHp:def.hp};unit.charges--;unit.work=null;
   toast(`${def.icon} ${def.name} 完工，每脉冲 ${yieldText(tileYield(t))}`,'good');addLog(`${def.icon} 工人完成 ${def.name}，剩余 ${unit.charges} 次建设。`,'good');burst(t.q,t.r,'#66e7a7',15,.9);state.score+=30;
   if(unit.charges<=0){toast('👷 工人完成五项工程后光荣退役。');state.units=state.units.filter(u=>u.id!==unit.id);if(state.selection?.id===unit.id)state.selection={kind:'tile',q:t.q,r:t.r};}
   renderPanels();

@@ -505,6 +505,56 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.ok(result.area >= 840);
 });
 
+test("ally AI uses independent economy instead of player resources", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const s = freshState(false, 'medium', 'default', 2, 3);
+      state = s;
+      const playerBefore = {...state.resources};
+      const allyBefore = {...state.allyAI.resources};
+      const allyCity = state.cities.find((city) => city.allyAI);
+      const queued = window.__STARFIRE_DEBUG__.allyQueueProduct(allyCity, 'warrior');
+      const playerAfterQueue = {...state.resources};
+      const allyAfterQueue = {...state.allyAI.resources};
+      const beforeUnits = state.units.length;
+      completeProduct(allyCity, { id: 'warrior' });
+      const madeAlly = state.units.slice(beforeUnits).find((unit) => unit.type === 'warrior');
+      const allyWorker = state.units.find((unit) => unit.allyAI && unit.type === 'worker');
+      state.completed.add('agriculture');
+      state.completed.add('mining');
+      const tile = [...tiles.values()].find((item) => canImproveTile(item).ok && findPath(allyWorker, { q: allyWorker.q, r: allyWorker.r }, item).length);
+      assignWorkerBuild(allyWorker, tile, false);
+      const work = allyWorker.work;
+      tile.improvement = { type: work.type, team: 'player', owner: 'ally', hp: IMPROVEMENTS[work.type].hp, maxHp: IMPROVEMENTS[work.type].hp };
+      const playerYield = calculateYield();
+      const allyYield = window.__STARFIRE_DEBUG__.calculateAllyYield();
+      const allyPanel = renderCitySelection(allyCity);
+      return {
+        queued,
+        playerUnchanged: JSON.stringify(playerBefore) === JSON.stringify(playerAfterQueue),
+        allySpentProduction: allyAfterQueue.production < allyBefore.production,
+        madeUnitIsAlly: !!madeAlly && madeAlly.allyAI === true,
+        allyFacilityFriendly: tile.improvement.team === 'player',
+        allyPanelHasNoManualProducts: !allyPanel.includes('data-product='),
+        playerYieldFromAllyFacility: Object.values(tileYield(tile)).every((value) => value === 0),
+        allyYieldHasFacility: Object.values(allyYield).some((value) => value > 0),
+        playerYieldIgnoresAllyCity: playerYield.production < allyYield.production + 20,
+      };
+    })()`,
+  );
+  assert.equal(result.queued, true);
+  assert.equal(result.playerUnchanged, true);
+  assert.equal(result.allySpentProduction, true);
+  assert.equal(result.madeUnitIsAlly, true);
+  assert.equal(result.allyFacilityFriendly, true);
+  assert.equal(result.allyPanelHasNoManualProducts, true);
+  assert.equal(result.playerYieldFromAllyFacility, true);
+  assert.equal(result.allyYieldHasFacility, true);
+  assert.equal(result.playerYieldIgnoresAllyCity, true);
+});
+
 test("new worker default AI setting affects produced workers", () => {
   const { context } = createHarness();
   const result = runInGame(

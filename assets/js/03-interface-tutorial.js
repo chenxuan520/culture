@@ -112,7 +112,7 @@ $('selection').addEventListener('change',e=>{
 });
 $('selection').addEventListener('click',e=>{
   const workerRow=e.target.closest('[data-worker-ai-row]');if(workerRow&&!e.target.closest('.toggle')){const input=workerRow.querySelector('[data-worker-ai]');if(input){input.checked=!input.checked;input.dispatchEvent(new Event('change',{bubbles:true}));}return;}
-  const product=e.target.closest('[data-product]');if(product){const c=selectedObject();if(c)queueProduct(c,product.dataset.product);return;}
+  const product=e.target.closest('[data-product]');if(product){const c=selectedObject();if(c?.allyAI){toast('盟友城市使用自己的资源和队列，不能用你的资源手动下单。','warn');return;}if(c)queueProduct(c,product.dataset.product);return;}
   const cancel=e.target.closest('[data-cancel]');if(cancel){const c=selectedObject();if(c)cancelQueue(c,cancel.dataset.cancel);return;}
   const action=e.target.closest('[data-action]');if(!action)return;if(action.dataset.blocked){toast(action.dataset.blocked,'warn');return;}const obj=selectedObject(),a=action.dataset.action;
   if(a==='toggle-worker-ai'&&obj?.type==='worker'){obj.aiWorker=!obj.aiWorker;if(obj.aiWorker&&!obj.work)chooseWorkerTask(obj);toast(obj.aiWorker?'🤖 工人 AI 已开启。':'工人 AI 已关闭。');renderPanels();}
