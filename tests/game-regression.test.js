@@ -650,3 +650,12 @@ test("visible docs do not contain removed terminology", () => {
   const text = files.map((file) => fs.readFileSync(path.join(ROOT, file), "utf8")).join("\n");
   assert.equal(/超载|试听|左上角/.test(text), false);
 });
+
+test("RTS control docs mention box select and production hotkeys", () => {
+  const files = ["index.html", "assets/js/03-interface-tutorial.js", "assets/js/06-enhancements.js"];
+  const text = files.map((file) => fs.readFileSync(path.join(ROOT, file), "utf8")).join("\n");
+  assert.match(text, /框选/);
+  assert.match(text, /鼠标边缘|地图边缘/);
+  assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
+  assert.match(text, /打开上次生产基地/);
+});

@@ -17,32 +17,53 @@ function showTooltip(x,y,hit){
   const tip=$('tooltip');if(!hit){tip.style.display='none';return;}tip.innerHTML=tooltipHTML(hit);tip.style.display='block';
   const maxX=state.screen.w-260,maxY=state.screen.h-110;tip.style.left=clamp(x+16,6,maxX)+'px';tip.style.top=clamp(y+16,6,maxY)+'px';
 }
-canvas.addEventListener('pointermove',e=>{
-  const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,t=screenToTile(x,y),hit=hitTest(x,y);state.hovered=t?{q:t.q,r:t.r}:null;state.pointer={x,y};showTooltip(x,y,hit);
-});
-canvas.addEventListener('pointerleave',()=>{state.hovered=null;$('tooltip').style.display='none';});
-canvas.addEventListener('click',e=>{
-  const r=canvas.getBoundingClientRect(),hit=hitTest(e.clientX-r.left,e.clientY-r.top);canvas.focus();if(!hit)return;
-  if(hit.kind==='unit')state.selection={kind:'unit',id:hit.obj.id};else if(hit.kind==='city')state.selection={kind:'city',id:hit.obj.id};else state.selection={kind:hit.kind,q:hit.obj.q,r:hit.obj.r};renderPanels();
-});
-canvas.addEventListener('contextmenu',e=>{
-  e.preventDefault();const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,hit=hitTest(x,y),u=state.selection?.kind==='unit'?unitById(state.selection.id):null;
-  const selectedCity=state.selection?.kind==='city'?cityById(state.selection.id):null;
+function selectedPlayerUnits(){
+  if(state.selection?.kind==='unit'){const u=unitById(state.selection.id);return u&&u.team==='player'?[u]:[];}
+  if(state.selection?.kind==='units')return state.selection.ids.map(unitById).filter(u=>u&&u.team==='player');
+  return [];
+}
+function selectHit(hit){
+  if(!hit)return;
+  if(hit.kind==='unit')state.selection={kind:'unit',id:hit.obj.id};
+  else if(hit.kind==='city'){state.selection={kind:'city',id:hit.obj.id};if(hit.obj.team==='player'&&!hit.obj.allyAI)state.lastProductionCityId=hit.obj.id;}
+  else state.selection={kind:hit.kind,q:hit.obj.q,r:hit.obj.r};
+  renderPanels();
+}
+function openProductionBase(){
+  const c=cityById(state.lastProductionCityId)||state.cities.find(x=>x.team==='player'&&x.capital&&x.hp>0)||state.cities.find(x=>x.team==='player'&&!x.allyAI&&x.hp>0);
+  if(!c){toast('没有可用的生产基地。','warn');return;}
+  state.selection={kind:'city',id:c.id};state.lastProductionCityId=c.id;centerOn(c.q,c.r);renderPanels();toast(`已打开生产基地：${c.name}`,'good');
+}
+function issueCommandAt(x,y){
+  const hit=hitTest(x,y),selectedCity=state.selection?.kind==='city'?cityById(state.selection.id):null;
   if(selectedCity?.team==='player'){
     const t=screenToTile(x,y);if(!t)return;
     if(!Number.isFinite(terrainCost(t,{def:{}}))){toast('集结点必须设置在陆地可通行地块。','warn');return;}
     selectedCity.rallyPoint={q:t.q,r:t.r};toast(`🎌 ${selectedCity.name} 集结点设为 ${t.q},${t.r}`,'good');renderPanels();return;
   }
-  if(!u||u.team!=='player'){toast('请先选择一个己方单位。','warn');return;}
+  const units=selectedPlayerUnits();
+  if(!units.length){toast('请先选择己方单位。','warn');return;}
   if(hit&&(hit.kind==='unit'||hit.kind==='city')&&hit.obj.team==='enemy'){
-    if(!u.def.combat){toast('这个单位不能攻击；请选择近卫军、侦察兵、弓手、坦克等作战单位。','warn');return;}
-    setLockedTarget(u,{kind:hit.kind,obj:hit.obj,q:hit.obj.q,r:hit.obj.r,team:'enemy'},true);renderPanels();return;
+    let count=0;for(const u of units)if(u.def.combat){setLockedTarget(u,{kind:hit.kind,obj:hit.obj,q:hit.obj.q,r:hit.obj.r,team:'enemy'},units.length===1);count++;}
+    if(!count)toast('选中的单位不能攻击；请选择作战单位。','warn');else{toast(`已下达攻击命令：${count} 个单位`);renderPanels();}return;
   }
   if(hit?.kind==='improvement'&&hit.obj.improvement?.team==='enemy'){
-    if(!u.def.combat){toast('这个单位不能攻击设施；请选择作战单位。','warn');return;}
-    setLockedTarget(u,{kind:'improvement',obj:hit.obj.improvement,tile:hit.obj,q:hit.obj.q,r:hit.obj.r,team:'enemy'},true);renderPanels();return;
+    let count=0;for(const u of units)if(u.def.combat){setLockedTarget(u,{kind:'improvement',obj:hit.obj.improvement,tile:hit.obj,q:hit.obj.q,r:hit.obj.r,team:'enemy'},units.length===1);count++;}
+    if(!count)toast('选中的单位不能攻击设施；请选择作战单位。','warn');else{toast(`已下达攻击设施命令：${count} 个单位`);renderPanels();}return;
   }
-  const t=screenToTile(x,y);if(!t)return;u.target=null;u.manualTarget=false;if(u.type==='worker')u.work=null;setUnitRoute(u,t.q,t.r,true);renderPanels();
+  const t=screenToTile(x,y);if(!t)return;
+  let moved=0;for(const u of units){u.target=null;u.manualTarget=false;if(u.type==='worker')u.work=null;if(setUnitRoute(u,t.q,t.r,units.length===1))moved++;}
+  if(units.length>1)toast(moved?`已下达移动命令：${moved} 个单位`:'没有可通行的路线。',moved?'':'warn');renderPanels();
+}
+canvas.addEventListener('pointermove',e=>{
+  const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,t=screenToTile(x,y),hit=hitTest(x,y);state.hovered=t?{q:t.q,r:t.r}:null;state.pointer={x,y};showTooltip(x,y,hit);
+});
+canvas.addEventListener('pointerleave',()=>{state.hovered=null;$('tooltip').style.display='none';});
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect(),hit=hitTest(e.clientX-r.left,e.clientY-r.top);canvas.focus();selectHit(hit);
+});
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();const r=canvas.getBoundingClientRect();issueCommandAt(e.clientX-r.left,e.clientY-r.top);
 });
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(tutorial.active)tutorial.flags.viewAction=true;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,before=screenToWorld(x,y),old=state.camera.zoom;
@@ -55,13 +76,19 @@ function togglePause(){if(!state.started||state.gameOver)return;if(tutorial.acti
 window.addEventListener('keydown',e=>{
   const k=e.key;if(k==='F1'){e.preventDefault();if(state.started&&!state.gameOver&&!tutorial.active)openTutorial(false);return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(k))e.preventDefault();
   if(k==='Escape'&&tutorial.active){closeTutorial(false);return;}
+  const tag=e.target?.tagName?.toLowerCase();if(tag==='input'||tag==='select'||tag==='textarea')return;
   if(k===' '){state.showIntel=true;if(tutorial.active)tutorial.flags.viewAction=true;return;}if(k.startsWith('Arrow')){state.keys.add(k);if(tutorial.active)tutorial.flags.viewAction=true;return;}
+  if((k==='g'||k==='G')&&!e.repeat&&state.started&&!state.gameOver){e.preventDefault();openProductionBase();return;}
+  if((k==='a'||k==='A')&&!e.repeat&&state.pointer&&state.started&&!state.gameOver){e.preventDefault();issueCommandAt(state.pointer.x,state.pointer.y);return;}
+  const hotkeys=['1','2','3','4','5','6','7','8','9','0'];const hotIndex=hotkeys.indexOf(k);
+  if(hotIndex>=0&&state.selection?.kind==='city'&&state.started&&!state.gameOver){const c=cityById(state.selection.id);if(c&&!c.allyAI&&c.team==='player'){e.preventDefault();const id=PRODUCT_IDS[hotIndex];if(id)queueProduct(c,id);return;}}
   if((k==='p'||k==='P')&&!e.repeat)togglePause();if((k==='c'||k==='C')&&!e.repeat&&state.started&&!state.gameOver)clearHalfEnemies();
 });
 window.addEventListener('keyup',e=>{state.keys.delete(e.key);if(e.key===' ')state.showIntel=false;});
 window.addEventListener('blur',()=>{state.keys.clear();state.showIntel=false;});
 function updateCamera(dt){
   let dx=0,dy=0;if(state.keys.has('ArrowLeft'))dx--;if(state.keys.has('ArrowRight'))dx++;if(state.keys.has('ArrowUp'))dy--;if(state.keys.has('ArrowDown'))dy++;
+  if(state.started&&!state.gameOver&&state.pointer){const edge=28;if(state.pointer.x<edge)dx--;else if(state.pointer.x>state.screen.w-edge)dx++;if(state.pointer.y<edge)dy--;else if(state.pointer.y>state.screen.h-edge)dy++;}
   if(dx||dy){const len=Math.hypot(dx,dy),speed=480/state.camera.zoom;state.camera.x+=dx/len*speed*dt;state.camera.y+=dy/len*speed*dt;clampCamera();}
 }
 function resetGame(started=true){
