@@ -400,7 +400,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
         difficultyHint: $('difficultyHint').textContent,
         skirmishHint: $('skirmishHint').textContent,
         mapMode: $('mapModeSelect').value,
-        playerFaction: $('playerFactionSelect').value,
+        enemyFaction: $('enemyFactionSelect').value,
         playerSide: $('playerSideSelect').value,
         leftAI: $('leftAISlots').value,
         rightAI: $('rightAISlots').value,
@@ -413,9 +413,9 @@ test("settings/help panels and intro difficulty text are wired", () => {
   );
   assert.match(result.introDifficulty, /中等/);
   assert.match(result.difficultyHint, /中等/);
-  assert.match(result.skirmishHint, /默认地图 · 蓝色阵线 · 左侧开局 · 1v1/);
+  assert.match(result.skirmishHint, /默认地图 · 敌方红黑紫阵营 · 左侧开局 · 1v1/);
   assert.equal(result.mapMode, "default");
-  assert.equal(result.playerFaction, "blue");
+  assert.equal(result.enemyFaction, "rbp");
   assert.equal(result.playerSide, "left");
   assert.equal(result.leftAI, "0");
   assert.equal(result.rightAI, "1");
@@ -509,12 +509,12 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.ok(result.area >= 840);
 });
 
-test("player faction and side selection use blue green yellow versus red black purple", () => {
+test("enemy faction selection swaps controlled color team", () => {
   const { context } = createHarness();
   const result = runInGame(
     context,
     `(() => {
-      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right', 'green');
+      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right', 'bgy');
       state = rightStart;
       const playerCapital = rightStart.cities.find((city) => city.team === 'player' && city.capital);
       const enemyCapital = rightStart.cities.find((city) => city.team === 'enemy' && city.capital);
@@ -536,7 +536,7 @@ test("player faction and side selection use blue green yellow versus red black p
       };
       return {
         playerSide: rightStart.playerSide,
-        statePlayerFaction: rightStart.playerFaction,
+        stateEnemyFaction: rightStart.enemyFaction,
         playerMapSide: rightStart.playerMapSide,
         enemyMapSide: rightStart.enemyMapSide,
         playerRightOfEnemy: playerCapital.q > enemyCapital.q,
@@ -551,17 +551,17 @@ test("player faction and side selection use blue green yellow versus red black p
     })()`,
   );
   assert.equal(result.playerSide, "right");
-  assert.equal(result.statePlayerFaction, "green");
-  assert.equal(result.playerFaction, "green");
+  assert.equal(result.stateEnemyFaction, "bgy");
+  assert.equal(result.playerFaction, "red");
   assert.equal(result.playerMapSide, "enemy");
   assert.equal(result.enemyMapSide, "player");
   assert.equal(result.playerRightOfEnemy, true);
-  assert.deepEqual(plain(result.allyFactions), ["blue", "yellow"]);
-  assert.deepEqual(plain(result.enemyFactions), ["red", "black", "purple"]);
+  assert.deepEqual(plain(result.allyFactions), ["black", "purple"]);
+  assert.deepEqual(plain(result.enemyFactions), ["blue", "green", "yellow"]);
   assert.equal(result.distinctStrokes, 6);
   assert.deepEqual(plain(result.closePairs), []);
   assert.equal(result.allColorsExist, true);
-  assert.equal(result.producedFaction, "green");
+  assert.equal(result.producedFaction, "red");
 });
 
 test("ally AI uses independent economy instead of player resources", () => {
