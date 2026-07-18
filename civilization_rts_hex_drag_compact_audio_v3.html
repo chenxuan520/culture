@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#07101c" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%27 y1=%270%27 x2=%271%27 y2=%271%27%3E%3Cstop stop-color=%27%23071325%27/%3E%3Cstop offset=%271%27 stop-color=%27%23153658%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27url(%23g)%27/%3E%3Cpath d=%27M32 7 53.7 19.5v25L32 57 10.3 44.5v-25Z%27 fill=%27none%27 stroke=%27%2359dcff%27 stroke-width=%274%27/%3E%3Cpath d=%27m32 15 4.2 10.7 11.5.7-8.9 7.3 2.9 11.2-9.7-6.2-9.7 6.2 2.9-11.2-8.9-7.3 11.5-.7Z%27 fill=%27%23ffd166%27/%3E%3C/svg%3E"
+    />
+    <title>文明：星火纪元 · 六边形RTS（拖拽视野版）</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <div class="brand">
+          <div class="brandIcon">🌌</div>
+          <div>
+            <h1>文明：星火纪元</h1>
+            <p>Hexagonal real-time strategy</p>
+          </div>
+        </div>
+        <div class="resources">
+          <div class="res">
+            <i>🌾</i>
+            <div>
+              <b id="food">0</b
+              ><small>食物 <strong id="gFood">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>⚙️</i>
+            <div>
+              <b id="production">0</b
+              ><small>生产 <strong id="gProduction">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>🔬</i>
+            <div>
+              <b id="science">0</b
+              ><small>科研 <strong id="gScience">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>🪙</i>
+            <div>
+              <b id="gold">0</b
+              ><small>金币 <strong id="gGold">+0</strong>/脉冲</small>
+            </div>
+          </div>
+          <div class="res">
+            <i>⚡</i>
+            <div>
+              <b id="energy">0</b
+              ><small>能量 <strong id="gEnergy">+0</strong>/脉冲</small>
+            </div>
+          </div>
+        </div>
+        <div class="topControls">
+          <button id="pause" class="btn">⏸ 暂停</button
+          ><label class="speed"
+            ><span>时间倍率</span
+            ><input
+              id="speed"
+              type="range"
+              min="0.1"
+              max="10"
+              step="0.1"
+              value="1"
+            /><b id="speedText">1.0×</b></label
+          ><button id="restart" class="btn">↻ 重新开始</button>
+        </div>
+      </header>
+      <div class="workspace">
+        <aside class="side left">
+          <div id="techScroll" class="scroll">
+            <div class="sectionTitle">
+              <h2>🧠 研发树</h2>
+              <small id="eraName">🏺 远古时代</small>
+            </div>
+            <div id="research" class="card"></div>
+            <div class="switchRow">
+              <div>
+                <b>🤖 AI 科研助理</b>
+                <p id="aiTechNote">资源允许时自动选择科技。</p>
+              </div>
+              <label class="toggle"
+                ><input id="aiTech" type="checkbox" checked /><span></span
+              ></label>
+            </div>
+            <div id="techTree"></div>
+          </div>
+        </aside>
+        <main id="mapArea">
+          <canvas id="game" tabindex="0"></canvas
+          ><button
+            id="tutorialHelp"
+            class="tutorialLauncher"
+            title="随时重新打开新手教程（F1）"
+          >
+            ❔ 新手教程
+          </button>
+          <div class="mapTop">
+            <div class="mission">
+              <b>🎯 战略目标：摧毁灰烬要塞</b
+              ><span
+                >右键规划完整路线；己方战斗单位会自动锁定三格内敌军并追击。</span
+              >
+            </div>
+            <div class="pulse">
+              <div class="pulseHead">
+                <b>⏱ 战略脉冲</b><strong id="pulseTime">1.0 秒</strong>
+              </div>
+              <div class="progress">
+                <div id="pulseFill" class="fill"></div>
+              </div>
+              <span id="clock">00:00 · 实时运行</span>
+            </div>
+          </div>
+          <div class="miniWrap">
+            <div class="miniLabel">战术雷达</div>
+            <canvas id="mini"></canvas>
+          </div>
+          <div id="tooltip" class="tooltip"></div>
+          <div id="toasts"></div>
+          <div class="mapBottom">
+            <div class="log">
+              <div class="logHead">
+                <span>文明纪事</span><span>最新动态</span>
+              </div>
+              <div id="logList" class="logList"></div>
+            </div>
+            <div class="help">
+              按住左键拖地图 · <span class="key">WASD</span>/<span class="key"
+                >↑↓←→</span
+              >
+              平移 · 滚轮缩放 · 右键移动/锁敌 ·
+              <span class="key">空格</span> 全局情报 ·
+              <span class="key">P</span> 暂停 ·
+              <span class="key">C</span> 清除一半敌军
+            </div>
+          </div>
+        </main>
+        <aside class="side right">
+          <div id="rightScroll" class="scroll">
+            <div class="sectionTitle">
+              <h2>📡 指挥面板</h2>
+              <small id="selKind">等待选择</small>
+            </div>
+            <div id="selection"></div>
+            <div id="global" class="card global"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <button
+      id="settingsGear"
+      class="settingsGear"
+      type="button"
+      aria-label="设置"
+      title="设置"
+    >
+      ⚙️
+    </button>
+    <div id="settingsLayer" class="settingsLayer hidden">
+      <section
+        id="settingsPanel"
+        class="settingsPanel"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="settingsTitle"
+      >
+        <div class="settingsPanelHead">
+          <h2 id="settingsTitle">设置</h2>
+          <button
+            id="settingsClose"
+            class="settingsClose"
+            type="button"
+            aria-label="关闭设置"
+          >
+            ×
+          </button>
+        </div>
+        <div id="gameSettings" class="settingsGroup">
+          <div class="settingsGroupHead">
+            <b>敌军 AI</b
+            ><span id="difficultyHint"
+              >中等：敌军拥有独立经济、科研、生产和扩张，会组织波次进攻。</span
+            >
+          </div>
+          <label class="settingLine"
+            ><span>难度</span
+            ><select id="difficultySelect" aria-label="敌军 AI 难度">
+              <option value="easy">🌱 简单</option>
+              <option value="medium" selected>⚔️ 中等</option>
+              <option value="hard">☠️ 困难</option>
+            </select></label
+          >
+          <div class="difficultyButtons">
+            <button class="difficultyBtn" data-difficulty="easy">
+              <b>🌱 简单</b
+              ><span>发展较慢、波次稀疏，不主动扩张。</span></button
+            ><button class="difficultyBtn active" data-difficulty="medium">
+              <b>⚔️ 中等</b
+              ><span>完整发展、第二城市、持续编队进攻。</span></button
+            ><button class="difficultyBtn" data-difficulty="hard">
+              <b>☠️ 困难</b
+              ><span>快速科技、三城扩张、精英军团与堡垒护盾。</span>
+            </button>
+          </div>
+        </div>
+        <div id="audioDock" class="settingsGroup audioDock" aria-live="polite">
+          <div class="audioSettingsHead">
+            <b>声音</b
+            ><span id="audioStatus" class="small muted">声音待启动</span>
+          </div>
+          <div class="audioDockControls">
+            <button id="audioDockToggle" type="button" aria-label="声音开关">
+              🔊</button
+            ><input
+              id="audioDockVolume"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value="78"
+              aria-label="游戏音量"
+            /><output id="audioDockVolumeText">78%</output>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div id="intro" class="modal">
+      <div class="modalCard">
+        <div class="kicker">Real-time civilization prototype</div>
+        <h2>在几秒内跨越千年</h2>
+        <p>
+          资源、生产、科研、寻路和战斗都由同一套实时模拟钟驱动，速度滑块从 0.1×
+          到 10× 真正改变整个世界。
+        </p>
+        <div class="features">
+          <div class="feature">
+            <b>⬡ 六边形 RTS</b
+            ><span
+              >右键一次规划完整路线，虚线保留到抵达；按住左键拖地图，也可用
+              WASD/方向键平移。</span
+            >
+          </div>
+          <div class="feature">
+            <b>🤖 三层 AI</b
+            ><span
+              >你的科研与工人可托管；敌军也会采集、科研、建城、生产并组织进攻。</span
+            >
+          </div>
+          <div class="feature">
+            <b>🔷 光棱组网</b
+            ><span>三格内链式储能，两辆起攻击翻倍并绘制棱镜光束。</span>
+          </div>
+          <div class="feature">
+            <b>🎈 基洛夫空艇</b
+            ><span>无视地形，范围爆破，战斗全过程带粒子与浮动伤害。</span>
+          </div>
+          <div class="feature">
+            <b>✨ 星火遗迹</b
+            ><span>探索可获得随机资源或直接推进当前科研。</span>
+          </div>
+          <div class="feature">
+            <b>⚡ 超载协议</b
+            ><span>消耗能量短时提升火力与机动，可叠加混编阵线加成。</span>
+          </div>
+        </div>
+        <div class="modalActions dual">
+          <button id="start" class="modalBtn secondary">直接开始游戏</button
+          ><button id="startTutorial" class="modalBtn">🎓 进入新手教程</button>
+        </div>
+        <p class="introHint">
+          不熟悉玩法时推荐教程。进入游戏后也可点击地图左上角的
+          <b>❔ 新手教程</b> 随时重看，也可以按 <span class="key">F1</span>。
+        </p>
+      </div>
+    </div>
+    <div id="tutorial" class="tutorialLayer hidden" aria-live="polite">
+      <div id="tutorialSpotlight" class="tutorialSpotlight center"></div>
+      <section
+        id="tutorialCard"
+        class="tutorialCard"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tutorialTitle"
+      >
+        <div class="tutorialTop">
+          <span id="tutorialStepLabel" class="tutorialProgressLabel"
+            >新手教程 1 / 11</span
+          ><span class="tutorialSafe">🛡️ 引导期间敌军停火</span>
+        </div>
+        <div class="tutorialProgress">
+          <i id="tutorialProgressBar" style="width: 10%"></i>
+        </div>
+        <div class="tutorialHeading">
+          <div id="tutorialIcon" class="tutorialIcon">🎓</div>
+          <div>
+            <h2 id="tutorialTitle">欢迎来到星火纪元</h2>
+            <p id="tutorialSubtitle">
+              跟着高亮区域，约几分钟即可掌握核心循环。
+            </p>
+          </div>
+        </div>
+        <div id="tutorialBody" class="tutorialBody"></div>
+        <div id="tutorialTask" class="tutorialTask hidden">
+          <div id="tutorialTaskIcon" class="tutorialTaskIcon">○</div>
+          <div>
+            <b>动手试试（可跳过）</b>
+            <p id="tutorialTaskText"></p>
+          </div>
+        </div>
+        <div id="tutorialTip" class="tutorialTip"></div>
+        <div class="tutorialActions">
+          <button id="tutorialSkip" class="tutorialAction skip">跳过教程</button
+          ><button id="tutorialDemo" class="tutorialAction demo">
+            ▶ 自动演示</button
+          ><button id="tutorialPrev" class="tutorialAction">上一步</button
+          ><button id="tutorialNext" class="tutorialAction next">下一步</button>
+        </div>
+      </section>
+    </div>
+    <div id="end" class="modal hidden">
+      <div
+        class="modalCard"
+        style="width: min(560px, 96vw); text-align: center"
+      >
+        <div id="endKicker" class="kicker">Campaign resolved</div>
+        <h2 id="endTitle">文明胜利</h2>
+        <p id="endText"></p>
+        <div
+          class="modalActions"
+          style="justify-content: center; margin-top: 18px"
+        >
+          <button id="endRestart" class="modalBtn">重新开始文明</button>
+        </div>
+      </div>
+    </div>
+    <script src="assets/js/01-world-data.js"></script>
+    <script src="assets/js/02-simulation.js"></script>
+    <script src="assets/js/03-interface-tutorial.js"></script>
+    <script src="assets/js/04-rendering.js"></script>
+    <script src="assets/js/05-bootstrap.js"></script>
+    <script src="assets/js/06-enhancements.js"></script>
+    <script src="assets/js/07-map-interactions.js"></script>
+  </body>
+</html>
