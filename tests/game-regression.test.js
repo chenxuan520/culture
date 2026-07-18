@@ -684,6 +684,26 @@ test("tile pulse contribution displays actual yield, not pulse duration", () => 
   assert.equal(result.hasYield, true);
 });
 
+test("unbuilt resource tiles show potential yield instead of all zeroes", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const tile = [...tiles.values()].find((item) => item.resource && !item.improvement);
+      const html = renderTileSelection(tile);
+      const resourceYield = RESOURCE_DEFS[tile.resource].yield;
+      return {
+        showsPotentialTitle: html.includes('潜在每脉冲产出'),
+        showsPotentialText: html.includes(yieldText(resourceYield)),
+        hasNonZeroPotential: Object.entries(resourceYield).some(([key, value]) => value > 0 && html.includes(RESOURCE_META[key].name + ' <b>+' + value + '</b>')),
+      };
+    })()`,
+  );
+  assert.equal(result.showsPotentialTitle, true);
+  assert.equal(result.showsPotentialText, true);
+  assert.equal(result.hasNonZeroPotential, true);
+});
+
 test("visible docs do not contain removed terminology", () => {
   const files = ["index.html", "assets/js/03-interface-tutorial.js"];
   const text = files.map((file) => fs.readFileSync(path.join(ROOT, file), "utf8")).join("\n");
