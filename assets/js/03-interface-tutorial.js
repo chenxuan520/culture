@@ -52,8 +52,10 @@ function productAvailability(city,id){
 function renderCitySelection(c){
   const icon=c.team==='player'?(c.capital?'🏠':'🏙️'):'🏰',y=cityYield(c);let tags=badge(c.capital?'首都核心':'区域城市',c.team==='player'?'good':'danger');
   for(const b of c.buildings)tags+=badge(`${BUILDING_DEFS[b].icon} ${BUILDING_DEFS[b].name}`,'cyan');if(c.shield>0)tags+=badge(`🫧 护盾 ${Math.ceil(c.shield)}/${c.maxShield}`,'cyan');
+  if(c.rallyPoint)tags+=badge(`🎌 集结 ${c.rallyPoint.q},${c.rallyPoint.r}`,'cyan');
   let html=`<div class="card"><div class="hero"><div class="heroIcon">${icon}</div><div><h2>${c.name}</h2><p>${c.team==='player'?'城市会自然产生基础资源，并同时维护独立建造队列。':'灰烬军团的核心堡垒，防御与生产能力均弱于玩家。'}</p>${healthBar(c.hp,c.maxHp)}${c.maxShield?healthBar(c.shield,c.maxShield,'linear-gradient(90deg,#7c73ff,#59dcff)'):''}</div></div><div class="badges">${tags}</div><div class="stats">${stat('人口',c.population)}${stat('队列',c.queue.length+'/7')}${stat('基础产出',yieldText(y))}${stat('坐标',`${c.q}, ${c.r}`)}</div>`;
   if(c.team==='player'){
+    html+=`<div class="sub">集结点 <span>${c.rallyPoint?`战斗单位完成后前往 ${c.rallyPoint.q},${c.rallyPoint.r}`:'选中城市后右键地图设置'}</span></div><div class="actions"><button class="action ${c.rallyPoint?'':'blocked'} full" data-action="clear-rally" ${c.rallyPoint?'':'data-blocked="当前城市还没有集结点" aria-disabled="true"'}>🎌 清除集结点</button></div>`;
     html+=`<div class="sub">建造队列 <span>取消后资源全额退回</span></div><div class="queue">`;
     if(!c.queue.length)html+=`<div class="empty">队列为空。下方点击多个项目可连续排队。</div>`;
     c.queue.forEach((item,i)=>{const d=productDef(item.id),pct=item.progress/item.time*100;html+=`<div class="queueItem"><div class="qIcon">${d.icon}</div><div><b>${i===0?'▶ ':''}${d.name}</b><small>${i===0?`${Math.max(0,item.time-item.progress).toFixed(1)} 秒后完成`:'等待前项完成'} · ${costText(item.cost)}</small><div class="progress"><div class="fill" style="width:${i===0?pct:0}%"></div></div></div><button class="miniBtn" data-cancel="${item.qid}">取消</button></div>`;});
@@ -119,6 +121,7 @@ $('selection').addEventListener('click',e=>{
   else if(a==='overdrive'&&obj?.def?.combat)activateOverdrive(obj);
   else if(a==='toggle-hold'&&obj?.def?.combat)toggleHoldPosition(obj);
   else if(a==='stop-unit'&&obj?.def)stopUnit(obj);
+  else if(a==='clear-rally'&&obj?.team==='player'){obj.rallyPoint=null;toast('已清除城市集结点。','good');renderPanels();}
   else if(a==='center-selection'){if(obj?.q!==undefined)centerOn(obj.q,obj.r);}
   else if(a==='dispatch-worker'&&obj?.q!==undefined)dispatchNearestWorker(obj);
   else if(a==='destroy-improvement'&&obj?.q!==undefined)demolishImprovement(obj);

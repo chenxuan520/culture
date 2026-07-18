@@ -97,31 +97,59 @@ function terrainCost(tile,unit){if(unit?.def?.flying)return 1;if(!tile||tile.ter
 function isLand(tile){return tile&&tile.terrain!=='water'&&tile.terrain!=='mountain';}
 function hexNeighbors(q,r){const out=[];for(const [dq,dr] of DIRS){const t=tileAt(q+dq,r+dr);if(t)out.push(t);}return out;}
 
+const DEFAULT_MAP_CONFIG = {mode:'default',seed:24681357,width:20,height:15,water:.10,mountain:.07,forest:.17,hills:.17,desert:.13,resourceRate:1,ruinRate:.045};
+let currentMapConfig = {...DEFAULT_MAP_CONFIG};
+function createMapConfig(mode='default',seedOverride=null){
+  if(mode!=='random')return{...DEFAULT_MAP_CONFIG};
+  const seed=(seedOverride??((Date.now()^Math.floor(Math.random()*0x7fffffff))>>>0))>>>0,rnd=seeded(seed);
+  const width=18+Math.floor(rnd()*11),height=13+Math.floor(rnd()*8);
+  return{mode:'random',seed,width,height,water:.07+rnd()*.09,mountain:.05+rnd()*.08,forest:.13+rnd()*.12,hills:.13+rnd()*.12,desert:.10+rnd()*.13,resourceRate:.85+rnd()*.55,ruinRate:.035+rnd()*.055};
+}
+function mapLayout(config=currentMapConfig){
+  const w=config.width||MAP_W,h=config.height||MAP_H,midR=Math.floor(h/2),enemyQ=Math.max(8,w-4);
+  return{midR,player:{q:3,r:midR},enemy:{q:enemyQ,r:midR},camera:{q:Math.min(5,w-1),r:midR},
+    playerUnits:[[4,midR],[3,Math.min(h-1,midR+1)],[4,Math.max(0,midR-1)]],
+    enemyUnits:[[enemyQ-1,midR],[enemyQ,Math.min(h-1,midR+1)],[enemyQ-1,Math.max(0,midR-1)],[enemyQ+1,midR],[enemyQ,Math.max(0,midR-1)]].map(([q,r])=>[clamp(q,0,w-1),clamp(r,0,h-1)])};
+}
+function mapSideSlots(side,count=3,layout=mapLayout()){
+  const dir=side==='player'?1:-1,base=side==='player'?layout.player:layout.enemy,rows=count===1?[0]:count===2?[-2,2]:[-3,0,3];
+  return rows.map((off,i)=>({q:clamp(base.q+i*dir*2,1,mapWidth()-2),r:clamp(base.r+off,1,mapHeight()-2)}));
+}
+function mapWidth(){return currentMapConfig.width||MAP_W;}
+function mapHeight(){return currentMapConfig.height||MAP_H;}
 let tiles = new Map();
 function tileAt(q,r){return tiles.get(key(q,r));}
-function generateMap(){
-  const rnd=seeded(24681357), map=new Map();
-  for(let r=0;r<MAP_H;r++)for(let q=0;q<MAP_W;q++){
-    const edge=Math.min(q,r,MAP_W-1-q,MAP_H-1-r), n=(rnd()+hashNoise(q,r,31)+hashNoise(q,r,79))/3;
+function generateMap(config=currentMapConfig){
+  currentMapConfig={...config};const rnd=seeded(currentMapConfig.seed), map=new Map(),w=mapWidth(),h=mapHeight(),layout=mapLayout(currentMapConfig);
+  for(let r=0;r<h;r++)for(let q=0;q<w;q++){
+    const edge=Math.min(q,r,w-1-q,h-1-r), n=(rnd()+hashNoise(q,r,31+currentMapConfig.seed)+hashNoise(q,r,79+currentMapConfig.seed))/3;
     let terrain='grass';
-    if(edge===0&&n<.36)terrain='water';
-    else if(n<.10)terrain='water'; else if(n<.17)terrain='mountain'; else if(n<.34)terrain='forest';
-    else if(n<.51)terrain='hills'; else if(n<.66)terrain='plains'; else if(n<.79)terrain='desert';
+    if(currentMapConfig.mode==='random'){
+      const water=currentMapConfig.water,mountain=water+currentMapConfig.mountain,forest=mountain+currentMapConfig.forest,hills=forest+currentMapConfig.hills,desert=hills+currentMapConfig.desert;
+      if(edge===0&&n<Math.min(.46,water+.24))terrain='water';
+      else if(n<water)terrain='water'; else if(n<mountain)terrain='mountain'; else if(n<forest)terrain='forest';
+      else if(n<hills)terrain='hills'; else if(n<desert)terrain='desert'; else terrain=rnd()<.48?'plains':'grass';
+    }else{
+      if(edge===0&&n<.36)terrain='water';
+      else if(n<.10)terrain='water'; else if(n<.17)terrain='mountain'; else if(n<.34)terrain='forest';
+      else if(n<.51)terrain='hills'; else if(n<.66)terrain='plains'; else if(n<.79)terrain='desert';
+    }
     const t={q,r,terrain,resource:null,improvement:null,ruin:false,decor:rnd()};
     map.set(key(q,r),t);
   }
   // 固定起始走廊，避免随机地图把双方困住。
-  const safe=[];for(let r=4;r<=10;r++)for(let q=1;q<=18;q++)if(Math.abs(r-7)<=2||q<6||q>13)safe.push([q,r]);
+  const safe=[];for(let r=Math.max(1,layout.midR-3);r<=Math.min(h-2,layout.midR+3);r++)for(let q=1;q<=w-2;q++)if(Math.abs(r-layout.midR)<=2||q<layout.player.q+3||q>layout.enemy.q-3)safe.push([q,r]);
   for(const [q,r] of safe){const t=map.get(key(q,r));if(t&&(t.terrain==='water'||t.terrain==='mountain'))t.terrain=rnd()<.35?'forest':'plains';}
-  for(const p of [[3,7],[16,7],[4,7],[15,7],[3,6],[3,8],[16,6],[16,8]]){const t=map.get(key(...p));if(t)t.terrain='plains';}
+  const sideSafe=[...mapSideSlots('player',3,layout),...mapSideSlots('enemy',3,layout)].flatMap(s=>[[s.q,s.r],[s.q+1,s.r],[s.q-1,s.r],[s.q,s.r+1],[s.q,s.r-1]]);
+  for(const p of [[layout.player.q,layout.player.r],[layout.enemy.q,layout.enemy.r],...layout.playerUnits,...layout.enemyUnits,...sideSafe]){const t=map.get(key(...p));if(t)t.terrain='plains';}
   for(const t of map.values()){
     if(t.terrain==='mountain'||t.terrain==='water')continue;
-    const rv=rnd();
-    if(t.terrain==='forest'&&rv<.34)t.resource='timber';
-    else if(t.terrain==='hills'&&rv<.30)t.resource=rv<.15?'iron':'crystal';
-    else if(t.terrain==='desert'&&rv<.25)t.resource=rv<.12?'oil':'crystal';
-    else if((t.terrain==='grass'||t.terrain==='plains')&&rv<.23)t.resource='wheat';
-    if(isLand(t)&&rnd()<.045&&hexDistance(t,{q:3,r:7})>3&&hexDistance(t,{q:16,r:7})>2)t.ruin=true;
+    const rv=rnd(),rate=currentMapConfig.resourceRate;
+    if(t.terrain==='forest'&&rv<.34*rate)t.resource='timber';
+    else if(t.terrain==='hills'&&rv<.30*rate)t.resource=rv<.15*rate?'iron':'crystal';
+    else if(t.terrain==='desert'&&rv<.25*rate)t.resource=rv<.12*rate?'oil':'crystal';
+    else if((t.terrain==='grass'||t.terrain==='plains')&&rv<.23*rate)t.resource='wheat';
+    if(isLand(t)&&rnd()<currentMapConfig.ruinRate&&hexDistance(t,layout.player)>3&&hexDistance(t,layout.enemy)>2)t.ruin=true;
   }
   return map;
 }
@@ -141,16 +169,17 @@ function createCity(team,q,r,capital=false,name){
   return city;
 }
 function freshState(started=false){
-  tiles=generateMap();
-  const playerCity=createCity('player',3,7,true,'曙光城');
-  const enemyCity=createCity('enemy',16,7,true,'灰烬要塞');
+  tiles=generateMap(createMapConfig('default'));const layout=mapLayout();
+  const playerCity=createCity('player',layout.player.q,layout.player.r,true,'曙光城');
+  const enemyCity=createCity('enemy',layout.enemy.q,layout.enemy.r,true,'灰烬要塞');
   const s={started,paused:false,gameOver:false,speed:1,simTime:0,pulseTimer:0,enemySpawnTimer:0,enemyThink:0,
     resources:{food:140,production:220,science:96,gold:260,energy:82},lastYield:{food:0,production:0,science:0,gold:0,energy:0},
     cities:[playerCity,enemyCity],units:[],effects:[],logs:[],completed:new Set(),research:null,aiTech:true,selection:{kind:'city',id:playerCity.id},
     hovered:null,showIntel:false,keys:new Set(),score:0,era:0,overdriveGlobal:0,uiTimer:0,uiHoldUntil:0,toastSeq:0,tutorialActive:false,tutorialRewarded:false,
-    camera:{x:axialToWorld(5,7).x,y:axialToWorld(5,7).y,zoom:.86},screen:{w:1,h:1,dpr:1},lastFrame:performance.now(),acc:0};
-  s.units.push(createUnit('warrior','player',4,7),createUnit('worker','player',3,8),createUnit('scout','player',4,6));
-  s.units.push(createUnit('raider','enemy',15,7),createUnit('enemyArcher','enemy',16,8),createUnit('enemyBuggy','enemy',15,6));
+    mapMode:currentMapConfig.mode,mapSeed:currentMapConfig.seed,mapSize:{width:mapWidth(),height:mapHeight()},
+    camera:{x:axialToWorld(layout.camera.q,layout.camera.r).x,y:axialToWorld(layout.camera.q,layout.camera.r).y,zoom:.86},screen:{w:1,h:1,dpr:1},lastFrame:performance.now(),acc:0};
+  s.units.push(createUnit('warrior','player',layout.playerUnits[0][0],layout.playerUnits[0][1]),createUnit('worker','player',layout.playerUnits[1][0],layout.playerUnits[1][1]),createUnit('scout','player',layout.playerUnits[2][0],layout.playerUnits[2][1]));
+  s.units.push(createUnit('raider','enemy',layout.enemyUnits[0][0],layout.enemyUnits[0][1]),createUnit('enemyArcher','enemy',layout.enemyUnits[1][0],layout.enemyUnits[1][1]),createUnit('enemyBuggy','enemy',layout.enemyUnits[2][0],layout.enemyUnits[2][1]));
   return s;
 }
 let state=freshState(false);

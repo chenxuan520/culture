@@ -27,6 +27,12 @@ canvas.addEventListener('click',e=>{
 });
 canvas.addEventListener('contextmenu',e=>{
   e.preventDefault();const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,hit=hitTest(x,y),u=state.selection?.kind==='unit'?unitById(state.selection.id):null;
+  const selectedCity=state.selection?.kind==='city'?cityById(state.selection.id):null;
+  if(selectedCity?.team==='player'){
+    const t=screenToTile(x,y);if(!t)return;
+    if(!Number.isFinite(terrainCost(t,{def:{}}))){toast('集结点必须设置在陆地可通行地块。','warn');return;}
+    selectedCity.rallyPoint={q:t.q,r:t.r};toast(`🎌 ${selectedCity.name} 集结点设为 ${t.q},${t.r}`,'good');renderPanels();return;
+  }
   if(!u||u.team!=='player'){toast('请先选择一个己方单位。','warn');return;}
   if(hit&&(hit.kind==='unit'||hit.kind==='city')&&hit.obj.team==='enemy'){
     if(!u.def.combat){toast('这个单位不能攻击；请选择近卫军、侦察兵、弓手、坦克等作战单位。','warn');return;}

@@ -214,6 +214,44 @@
             </button>
           </div>
         </div>
+        <div class="settingsGroup">
+          <div class="settingsGroupHead">
+            <b>开局配置</b
+            ><span id="skirmishHint"
+              >默认地图 · 1v1。随机模式会重掷地图面积、地形和资源。</span
+            >
+          </div>
+          <label class="settingLine"
+            ><span>地图</span
+            ><select id="mapModeSelect" aria-label="地图模式">
+              <option value="default" selected>⬡ 默认地图</option>
+              <option value="random">🎲 随机地图</option>
+            </select></label
+          >
+          <label class="settingLine"
+            ><span>左侧 AI</span
+            ><select id="leftAISlots" aria-label="左侧 AI 数量">
+              <option value="0" selected>无，玩家单人</option>
+              <option value="1">+1 盟友 AI</option>
+              <option value="2">+2 盟友 AI</option>
+            </select></label
+          >
+          <label class="settingLine"
+            ><span>右侧 AI</span
+            ><select id="rightAISlots" aria-label="右侧 AI 数量">
+              <option value="1" selected>1 个敌方 AI</option>
+              <option value="2">2 个敌方 AI</option>
+              <option value="3">3 个敌方 AI</option>
+            </select></label
+          >
+          <label class="settingLine"
+            ><span>新工人</span
+            ><select id="workerDefaultAI" aria-label="新工人默认 AI">
+              <option value="off" selected>默认关闭 AI</option>
+              <option value="on">生产后自动开 AI</option>
+            </select></label
+          >
+        </div>
         <div id="audioDock" class="settingsGroup audioDock" aria-live="polite">
           <div class="audioSettingsHead">
             <b>声音</b
@@ -297,6 +335,7 @@
             <ul>
               <li>左键点单位、城市或地块：选中并查看右侧面板。</li>
               <li>选中己方单位后右键空地：规划路线并移动。</li>
+              <li>选中己方城市后右键空地：设置集结点，之后新生产的战斗单位会自动前往。</li>
               <li>选中己方作战单位后右键敌人：锁定目标并追击攻击。</li>
               <li>选中工人后可开启工人 AI，或点资源地块派最近工人开发。</li>
               <li>
@@ -331,6 +370,15 @@
             <h3>城市和生产队列</h3>
             <p>
               右侧面板会显示当前选中的城市、单位或地块。选中曙光城时，下方会出现“可生产项目”。点一个项目，它会进入建造队列。队列里的项目按顺序完成，取消会返还资源。前期推荐顺序是：工人、近卫军、侦察兵，再根据科技补建筑或更高级单位。不要只造兵不发展经济，否则打完第一波后资源会跟不上；也不要只研究不造兵，否则敌军推进时没有防线。
+            </p>
+            <p>
+              城市可以设置集结点：先左键选中城市，再右键一个陆地空地。之后这个城市生产出的战斗单位会自动前往该位置集合；工人不会被集结点拉走。右侧城市面板可以清除集结点。
+            </p>
+          </section>
+          <section class="helpBlock">
+            <h3>开局设置</h3>
+            <p>
+              左下角齿轮可以设置地图和对战模式。默认地图保持固定面积和固定地形，适合按教程学习；随机地图会重新掷地图面积、地形和资源分布。左侧 AI 是你的盟友，右侧 AI 是敌人，最多可以设置成 3v3。也可以把“新工人”设为生产后自动开 AI，这样新造出的工人会直接寻找资源地块建设。
             </p>
           </section>
           <section class="helpBlock">

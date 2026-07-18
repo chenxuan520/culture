@@ -117,7 +117,7 @@ function drawMap(){
   drawTerrain();drawRoutes();drawResourcesAndImprovements();drawPrismNetworks();drawCities();drawTargetLocks();drawActiveCombat();drawUnits();drawEffects();ctx.restore();
   if(state.showIntel){ctx.save();ctx.fillStyle='rgba(3,11,21,.55)';ctx.fillRect(0,0,w,25);ctx.fillStyle='#d9f7ff';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText('空格情报层：显示全地图单位名称与生命值',w/2,16);ctx.restore();}
 }
-function mapBounds(){const a=axialToWorld(0,0),b=axialToWorld(MAP_W-1,MAP_H-1);return{minX:a.x-HEX,maxX:b.x+HEX,minY:a.y-HEX,maxY:b.y+HEX};}
+function mapBounds(){const a=axialToWorld(0,0),b=axialToWorld(mapWidth()-1,mapHeight()-1);return{minX:a.x-HEX,maxX:b.x+HEX,minY:a.y-HEX,maxY:b.y+HEX};}
 function clampCamera(){
   const b=mapBounds(),margin=120,halfW=state.screen.w/(2*state.camera.zoom),halfH=state.screen.h/(2*state.camera.zoom),minX=b.minX-margin,maxX=b.maxX+margin,minY=b.minY-margin,maxY=b.maxY+margin;
   state.camera.x=minX+halfW>maxX-halfW?(minX+maxX)/2:clamp(state.camera.x,minX+halfW,maxX-halfW);

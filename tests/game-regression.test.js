@@ -375,6 +375,11 @@ test("settings/help panels and intro difficulty text are wired", () => {
       return {
         introDifficulty: $('introDifficultyDesc').textContent,
         difficultyHint: $('difficultyHint').textContent,
+        skirmishHint: $('skirmishHint').textContent,
+        mapMode: $('mapModeSelect').value,
+        leftAI: $('leftAISlots').value,
+        rightAI: $('rightAISlots').value,
+        workerDefaultAI: $('workerDefaultAI').value,
         settingsFn: typeof window.toggleSettingsPanel,
         helpFn: typeof window.toggleHelpPanel,
       };
@@ -382,8 +387,138 @@ test("settings/help panels and intro difficulty text are wired", () => {
   );
   assert.match(result.introDifficulty, /中等/);
   assert.match(result.difficultyHint, /中等/);
+  assert.match(result.skirmishHint, /默认地图 · 1v1/);
+  assert.equal(result.mapMode, "default");
+  assert.equal(result.leftAI, "0");
+  assert.equal(result.rightAI, "1");
+  assert.equal(result.workerDefaultAI, "off");
   assert.equal(result.settingsFn, "function");
   assert.equal(result.helpFn, "function");
+});
+
+test("map mode can switch between default and reproducible random layouts", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const def = freshState(false, 'medium', 'default', 0, 1);
+      const randomA = createMapConfig('random', 123456);
+      const randomB = createMapConfig('random', 123456);
+      const randomState = freshState(false, 'medium', 'random', 0, 1);
+      return {
+        defaultMode: def.mapMode,
+        defaultSize: def.mapSize,
+        randomConfigStable: JSON.stringify(randomA) === JSON.stringify(randomB),
+        randomSizeInRange: randomState.mapSize.width >= 18 && randomState.mapSize.width <= 28 && randomState.mapSize.height >= 13 && randomState.mapSize.height <= 20,
+        randomMode: randomState.mapMode,
+        randomTileCount: tiles.size,
+        noWaterResources: [...tiles.values()].every((tile) => tile.terrain !== 'water' || !tile.resource),
+      };
+    })()`,
+  );
+  assert.equal(result.defaultMode, "default");
+  assert.deepEqual(plain(result.defaultSize), { width: 20, height: 15 });
+  assert.equal(result.randomConfigStable, true);
+  assert.equal(result.randomSizeInRange, true);
+  assert.equal(result.randomMode, "random");
+  assert.equal(result.randomTileCount, result.randomSizeInRange ? result.randomTileCount : 0);
+  assert.equal(result.noWaterResources, true);
+});
+
+test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const s = freshState(false, 'medium', 'default', 2, 3);
+      state = s;
+      const playerCities = s.cities.filter((city) => city.team === 'player');
+      const enemyCities = s.cities.filter((city) => city.team === 'enemy');
+      const allOnLand = [...s.cities, ...s.units].every((obj) => isLand(tileAt(obj.q, obj.r)));
+      const playerWorkers = s.units.filter((unit) => unit.team === 'player' && unit.type === 'worker');
+      const allyWorkers = playerWorkers.filter((unit) => unit.allyAI);
+      return {
+        leftAI: s.leftAI,
+        rightAI: s.rightAI,
+        playerCities: playerCities.length,
+        enemyCities: enemyCities.length,
+        allOnLand,
+        playerWorkers: playerWorkers.length,
+        allyWorkers: allyWorkers.length,
+        enemyUnits: s.units.filter((unit) => unit.team === 'enemy').length,
+      };
+    })()`,
+  );
+  assert.equal(result.leftAI, 2);
+  assert.equal(result.rightAI, 3);
+  assert.equal(result.playerCities, 3);
+  assert.equal(result.enemyCities, 3);
+  assert.equal(result.allOnLand, true);
+  assert.equal(result.playerWorkers, 3);
+  assert.equal(result.allyWorkers, 2);
+  assert.ok(result.enemyUnits >= 9);
+});
+
+test("new worker default AI setting affects produced workers", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      state.completed.add('agriculture');
+      state.completed.add('mining');
+      window.__STARFIRE_DEBUG__.setWorkerDefaultAI(true, false);
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const before = state.units.length;
+      completeProduct(city, { id: 'worker' });
+      const worker = state.units.slice(before).find((unit) => unit.type === 'worker');
+      window.__STARFIRE_DEBUG__.setWorkerDefaultAI(false, false);
+      const beforeManual = state.units.length;
+      completeProduct(city, { id: 'worker' });
+      const manualWorker = state.units.slice(beforeManual).find((unit) => unit.type === 'worker');
+      return {
+        autoAI: worker.aiWorker,
+        autoHasCharges: worker.charges,
+        manualAI: manualWorker.aiWorker,
+        manualHasCharges: manualWorker.charges,
+      };
+    })()`,
+  );
+  assert.deepEqual(plain(result), {
+    autoAI: true,
+    autoHasCharges: 5,
+    manualAI: false,
+    manualHasCharges: 5,
+  });
+});
+
+test("city rally point sends produced combat units to the target tile", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const target = [...tiles.values()].find((tile) => isLand(tile) && !cityAt(tile.q, tile.r) && hexDistance(city, tile) >= 3);
+      city.rallyPoint = { q: target.q, r: target.r };
+      const cityPanel = renderCitySelection(city);
+      const before = state.units.length;
+      completeProduct(city, { id: 'warrior' });
+      const warrior = state.units.slice(before).find((unit) => unit.type === 'warrior');
+      const end = warrior.route[warrior.route.length - 1];
+      const workerBefore = state.units.length;
+      completeProduct(city, { id: 'worker' });
+      const worker = state.units.slice(workerBefore).find((unit) => unit.type === 'worker');
+      return {
+        combatHasRoute: warrior.route.length > 0,
+        routeEndsAtRally: !!end && end.q === target.q && end.r === target.r,
+        workerRouteLength: worker.route.length,
+        panelShowsRally: cityPanel.includes('清除集结点') && cityPanel.includes('战斗单位完成后前往'),
+      };
+    })()`,
+  );
+  assert.equal(result.combatHasRoute, true);
+  assert.equal(result.routeEndsAtRally, true);
+  assert.equal(result.workerRouteLength, 0);
+  assert.equal(result.panelShowsRally, true);
 });
 
 test("map generation does not create undevelopable water resources", () => {
