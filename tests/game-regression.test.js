@@ -958,6 +958,14 @@ test("RTS control docs mention box select and production hotkeys", () => {
   assert.equal(/鼠标边缘|地图边缘|靠边滚屏|靠近边缘|自动滚动视野|自动平移视野/.test(text), false);
   assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
   assert.match(text, /打开上次生产基地/);
+  assert.match(text, /<span(?: class="key")?>H<\/span><b?>?|<span class="key">H<\/span> 打开上次生产基地/);
+  assert.equal(/<span(?: class="key")?>G<\/span>(?:<b>)?打开上次生产基地|<span class="key">G<\/span> 打开上次生产基地/.test(text), false);
+});
+
+test("production base hotkey uses H instead of G", () => {
+  const source = fs.readFileSync(path.join(ROOT, "assets/js/05-bootstrap.js"), "utf8");
+  assert.match(source, /k==='h'\|\|k==='H'/);
+  assert.equal(/k==='g'\|\|k==='G'/.test(source), false);
 });
 
 test("mouse command docs and handlers use left-click commands and right-click deselect", () => {
