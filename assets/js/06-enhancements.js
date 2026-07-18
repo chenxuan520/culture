@@ -65,7 +65,7 @@
   function homeSideForPlayer(side=selectedPlayerSide){return side==='right'?'enemy':'player';}
   function oppositeMapSide(side){return side==='enemy'?'player':'enemy';}
   function sideLabel(side=selectedPlayerSide){return side==='right'?'右侧开局':'左侧开局';}
-  function factionLabel(key=selectedEnemyFaction){return key==='bgy'?'蓝绿黄阵营':'红黑紫阵营';}
+  function factionLabel(key=selectedEnemyFaction){return key==='bgy'?'星火联盟':'灰烬军团';}
   function normalizeEnemyFaction(key){return key==='bgy'?'bgy':'rbp';}
   function playerTeam(){return opposingTeam(selectedEnemyFaction);}
   function factionKey(obj){if(!obj)return teamFactions(playerTeam())[0];if(obj.faction)return obj.faction;if(obj.team==='enemy')return teamFactions(selectedEnemyFaction)[0];return obj.allyAI?teamFactions(playerTeam())[1]:teamFactions(playerTeam())[0];}

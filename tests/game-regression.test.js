@@ -413,7 +413,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
   );
   assert.match(result.introDifficulty, /中等/);
   assert.match(result.difficultyHint, /中等/);
-  assert.match(result.skirmishHint, /默认地图 · 敌方红黑紫阵营 · 左侧开局 · 1v1/);
+  assert.match(result.skirmishHint, /默认地图 · 敌方灰烬军团 · 左侧开局 · 1v1/);
   assert.equal(result.mapMode, "default");
   assert.equal(result.enemyFaction, "rbp");
   assert.equal(result.playerSide, "left");
@@ -807,9 +807,10 @@ test("unbuilt resource tiles show potential yield instead of all zeroes", () => 
 });
 
 test("visible docs do not contain removed terminology", () => {
-  const files = ["index.html", "assets/js/03-interface-tutorial.js"];
+  const files = ["index.html", "assets/js/03-interface-tutorial.js", "assets/js/06-enhancements.js"];
   const text = files.map((file) => fs.readFileSync(path.join(ROOT, file), "utf8")).join("\n");
   assert.equal(/超载|试听|左上角/.test(text), false);
+  assert.equal(/红黑紫阵营|蓝绿黄阵营/.test(text), false);
 });
 
 test("RTS control docs mention box select and production hotkeys", () => {
