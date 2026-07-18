@@ -403,6 +403,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
         leftAI: $('leftAISlots').value,
         rightAI: $('rightAISlots').value,
         workerDefaultAI: $('workerDefaultAI').value,
+        settlerAutoFound: $('settlerAutoFound').value,
         settingsFn: typeof window.toggleSettingsPanel,
         helpFn: typeof window.toggleHelpPanel,
       };
@@ -415,9 +416,20 @@ test("settings/help panels and intro difficulty text are wired", () => {
   assert.equal(result.leftAI, "0");
   assert.equal(result.rightAI, "1");
   assert.equal(result.workerDefaultAI, "off");
+  assert.equal(result.settlerAutoFound, "off");
   assert.equal(result.settingsFn, "function");
   assert.equal(result.helpFn, "function");
   assert.equal(ids.get("gameSettings").id, "gameSettings");
+});
+
+test("worker default AI is a runtime setting, not an intro skirmish option", () => {
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const settings = html.slice(html.indexOf('id="settingsLayer"'), html.indexOf('id="helpLayer"'));
+  const intro = html.slice(html.indexOf('id="intro"'), html.indexOf('id="tutorial"'));
+  assert.equal(settings.includes('id="workerDefaultAI"'), true);
+  assert.equal(settings.includes('id="settlerAutoFound"'), true);
+  assert.equal(intro.includes('id="workerDefaultAI"'), false);
+  assert.equal(intro.includes('id="settlerAutoFound"'), false);
 });
 
 test("map mode can switch between default and reproducible random layouts", () => {
@@ -553,6 +565,28 @@ test("city rally point sends produced combat units to the target tile", () => {
   assert.equal(result.routeEndsAtRally, true);
   assert.equal(result.workerRouteLength, 0);
   assert.equal(result.panelShowsRally, true);
+});
+
+test("settler auto-found setting creates a city after route arrival", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      state.completed.add('engineering');
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const settler = createUnit('settler', 'player', city.q, city.r);
+      state.units.push(settler);
+      const target = [...tiles.values()].find((tile) => isLand(tile) && !cityAt(tile.q, tile.r) && hexDistance(city, tile) >= 4 && findPath(settler, { q: settler.q, r: settler.r }, tile).length);
+      window.__STARFIRE_DEBUG__.setSettlerAutoFound(true, false);
+      setUnitRoute(settler, target.q, target.r, true);
+      let guard = 0;
+      while (state.units.some((unit) => unit.id === settler.id) && settler.route.length && guard++ < 200) updateMovement(settler, 1);
+      const created = state.cities.find((item) => item.team === 'player' && item.q === target.q && item.r === target.r);
+      window.__STARFIRE_DEBUG__.setSettlerAutoFound(false, false);
+      return { cityCreated: !!created, settlerRemoved: !state.units.some((unit) => unit.id === settler.id) };
+    })()`,
+  );
+  assert.deepEqual(plain(result), { cityCreated: true, settlerRemoved: true });
 });
 
 test("map generation does not create undevelopable water resources", () => {

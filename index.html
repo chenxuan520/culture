@@ -187,6 +187,24 @@
           </button>
         </div>
         <div id="audioDock" class="settingsGroup audioDock" aria-live="polite">
+          <div class="settingsGroupHead">
+            <b>工人</b
+            ><span>控制城市后续生产出的工人是否自动接管建设。</span>
+          </div>
+          <label class="settingLine"
+            ><span>新工人</span
+            ><select id="workerDefaultAI" aria-label="新工人默认 AI">
+              <option value="off" selected>默认关闭 AI</option>
+              <option value="on">生产后自动开 AI</option>
+            </select></label
+          >
+          <label class="settingLine"
+            ><span>开拓者</span
+            ><select id="settlerAutoFound" aria-label="开拓者自动建城">
+              <option value="off" selected>手动建城</option>
+              <option value="on">到达后自动建城</option>
+            </select></label
+          >
           <div class="audioSettingsHead">
             <b>声音</b
             ><span id="audioStatus" class="small muted">声音待启动</span>
@@ -311,11 +329,14 @@
             <p>
               城市可以设置集结点：先左键选中城市，再右键一个陆地空地。之后这个城市生产出的战斗单位会自动前往该位置集合；工人不会被集结点拉走。右侧城市面板可以清除集结点。
             </p>
+            <p>
+              开拓者默认需要手动点击“在当前地块建立城市”。如果在左下角齿轮设置里打开“开拓者到达后自动建城”，它走到满足距离要求的陆地后会直接建城。
+            </p>
           </section>
           <section class="helpBlock">
             <h3>开局设置</h3>
             <p>
-              首页的“定制对局”用于开局前设置地图和对战模式。默认地图保持固定面积和固定地形，适合按教程学习；随机地图会重新掷地图面积、地形和资源分布。左侧 AI 是你的盟友，右侧 AI 是敌人，最多可以设置成 3v3。也可以把“新工人”设为生产后自动开 AI，这样新造出的工人会直接寻找资源地块建设。
+              首页的“定制对局”用于开局前设置地图和对战模式。默认地图保持固定面积和固定地形，适合按教程学习；随机地图会重新掷地图面积、地形和资源分布。左侧 AI 是你的盟友，右侧 AI 是敌人，最多可以设置成 3v3。新工人是否生产后自动开 AI、开拓者是否到达后自动建城，都在左下角齿轮设置里调整。
             </p>
           </section>
           <section class="helpBlock">
@@ -450,13 +471,6 @@
                 <option value="1" selected>1 个敌方 AI</option>
                 <option value="2">2 个敌方 AI</option>
                 <option value="3">3 个敌方 AI</option>
-              </select></label
-            >
-            <label class="settingLine"
-              ><span>新工人</span
-              ><select id="workerDefaultAI" aria-label="新工人默认 AI">
-                <option value="off" selected>默认关闭 AI</option>
-                <option value="on">生产后自动开 AI</option>
               </select></label
             >
           </div>
