@@ -879,7 +879,7 @@ test("enemy garrison over cap launches an attack instead of camping base", () =>
   assert.ok(result.wave > 0);
 });
 
-test("new worker default AI setting affects produced workers", () => {
+test("worker default AI setting affects opening and produced workers", () => {
   const { context } = createHarness();
   const result = runInGame(
     context,
@@ -887,25 +887,31 @@ test("new worker default AI setting affects produced workers", () => {
       state.completed.add('agriculture');
       state.completed.add('mining');
       window.__STARFIRE_DEBUG__.setWorkerDefaultAI(true, false);
+      const autoOpening = state.units.find((unit) => unit.team === 'player' && !unit.allyAI && (unit.type === 'worker' || unit.type === 'enemyWorker'));
       const city = state.cities.find((item) => item.team === 'player' && item.capital);
       const before = state.units.length;
       completeProduct(city, { id: 'worker' });
       const worker = state.units.slice(before).find((unit) => unit.type === 'worker');
       window.__STARFIRE_DEBUG__.setWorkerDefaultAI(false, false);
+      const manualOpening = state.units.find((unit) => unit.team === 'player' && !unit.allyAI && (unit.type === 'worker' || unit.type === 'enemyWorker'));
       const beforeManual = state.units.length;
       completeProduct(city, { id: 'worker' });
       const manualWorker = state.units.slice(beforeManual).find((unit) => unit.type === 'worker');
       return {
+        autoOpeningAI: autoOpening.aiWorker,
         autoAI: worker.aiWorker,
         autoHasCharges: worker.charges,
+        manualOpeningAI: manualOpening.aiWorker,
         manualAI: manualWorker.aiWorker,
         manualHasCharges: manualWorker.charges,
       };
     })()`,
   );
   assert.deepEqual(plain(result), {
+    autoOpeningAI: true,
     autoAI: true,
     autoHasCharges: 5,
+    manualOpeningAI: false,
     manualAI: false,
     manualHasCharges: 5,
   });
