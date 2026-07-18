@@ -96,7 +96,6 @@ window.addEventListener('blur',()=>{state.keys.clear();state.showIntel=false;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){state.keys.clear();state.showIntel=false;}});
 function updateCamera(dt){
   let dx=0,dy=0;if(state.keys.has('ArrowLeft')||state.keys.has('KeyA'))dx--;if(state.keys.has('ArrowRight')||state.keys.has('KeyD'))dx++;if(state.keys.has('ArrowUp')||state.keys.has('KeyW'))dy--;if(state.keys.has('ArrowDown')||state.keys.has('KeyS'))dy++;
-  if(state.started&&!state.gameOver&&state.pointer){const edge=28;if(state.pointer.x<edge)dx--;else if(state.pointer.x>state.screen.w-edge)dx++;if(state.pointer.y<edge)dy--;else if(state.pointer.y>state.screen.h-edge)dy++;}
   if(dx||dy){const len=Math.hypot(dx,dy),speed=480/state.camera.zoom;state.camera.x+=dx/len*speed*dt;state.camera.y+=dy/len*speed*dt;clampCamera();}
 }
 function resetGame(started=true){

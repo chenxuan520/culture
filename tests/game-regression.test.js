@@ -831,7 +831,8 @@ test("RTS control docs mention box select and production hotkeys", () => {
   const files = ["index.html", "assets/js/03-interface-tutorial.js", "assets/js/06-enhancements.js"];
   const text = files.map((file) => fs.readFileSync(path.join(ROOT, file), "utf8")).join("\n");
   assert.match(text, /框选/);
-  assert.match(text, /鼠标边缘|地图边缘/);
+  assert.match(text, /右键拖动地图|右键拖图|拖动地图/);
+  assert.equal(/鼠标边缘|地图边缘|靠边滚屏|靠近边缘|自动滚动视野|自动平移视野/.test(text), false);
   assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
   assert.match(text, /打开上次生产基地/);
 });
@@ -858,12 +859,13 @@ test("WASD camera movement has no A command conflict", () => {
   assert.match(bootstrap, /state\.keys\.add\(code\)/);
   assert.match(bootstrap, /state\.keys\.delete\(e\.code\)/);
   assert.match(enhancements, /state\.keys\.has\('KeyA'\)\)dx--/);
-  assert.match(enhancements, /state\.pointer[\s\S]*state\.screen\.w-edge/);
+  assert.equal(/const edge=28|screen\.w-edge|screen\.h-edge/.test(bootstrap + enhancements), false);
 });
 
-test("right mouse drag pans map when no command selection exists", () => {
+test("right mouse drag pans map when no unit selection exists", () => {
   const source = fs.readFileSync(path.join(ROOT, "assets/js/07-map-interactions.js"), "utf8");
-  assert.match(source, /const rightDrag=e\.button===2&&!hasCommandSelection\(\)/);
+  assert.match(source, /function hasUnitSelection\(\)/);
+  assert.match(source, /const rightDrag=e\.button===2&&!hasUnitSelection\(\)/);
   assert.match(source, /dragState\.mode=rightDrag\?'pan':'box'/);
   assert.match(source, /state\.camera\.x=dragState\.startCamX-dx\/state\.camera\.zoom/);
   assert.match(source, /state\.rightPanSuppressUntil=performance\.now\(\)\+250/);

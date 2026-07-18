@@ -4,11 +4,11 @@
 (() => {
   const dragState={pointerId:null,startX:0,startY:0,currentX:0,currentY:0,startCamX:0,startCamY:0,currentCamX:0,currentCamY:0,mode:'box',moved:false,suppressUntil:0};
   const threshold=5;
-  function hasCommandSelection(){return state.selection?.kind==='unit'||state.selection?.kind==='units'||state.selection?.kind==='city';}
+  function hasUnitSelection(){return state.selection?.kind==='unit'||state.selection?.kind==='units';}
 
   function beginMapDrag(e){
     if(!state?.started||state.gameOver||!e.isPrimary)return;
-    const rightDrag=e.button===2&&!hasCommandSelection();
+    const rightDrag=e.button===2&&!hasUnitSelection();
     if(e.button!==0&&!rightDrag)return;
     dragState.pointerId=e.pointerId;
     dragState.startX=e.clientX;dragState.startY=e.clientY;
