@@ -60,10 +60,14 @@ canvas.addEventListener('pointermove',e=>{
 });
 canvas.addEventListener('pointerleave',()=>{state.hovered=null;$('tooltip').style.display='none';});
 canvas.addEventListener('click',e=>{
-  const r=canvas.getBoundingClientRect(),hit=hitTest(e.clientX-r.left,e.clientY-r.top);canvas.focus();selectHit(hit);
+  const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,hit=hitTest(x,y);canvas.focus();
+  const selectedCity=state.selection?.kind==='city'?cityById(state.selection.id):null,units=selectedPlayerUnits();
+  if(units.length&&!(hit?.obj?.team==='player')){issueCommandAt(x,y);return;}
+  if(selectedCity?.team==='player'&&!selectedCity.allyAI&&(!hit||hit.kind==='tile')){issueCommandAt(x,y);return;}
+  selectHit(hit);
 });
 canvas.addEventListener('contextmenu',e=>{
-  e.preventDefault();const r=canvas.getBoundingClientRect();issueCommandAt(e.clientX-r.left,e.clientY-r.top);
+  e.preventDefault();state.selection=null;renderPanels();toast('已取消当前选择。');
 });
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(tutorial.active)tutorial.flags.viewAction=true;const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,before=screenToWorld(x,y),old=state.camera.zoom;
@@ -118,4 +122,4 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 
-resizeCanvases();state.lastYield=calculateYield();addLog('🏠 曙光城开始自然产生基础资源。','good');addLog('⬡ 右键可规划完整六边形路线。');addLog('⚠️ 灰烬军团能力较弱，但会持续增援。','warn');renderPanels();clampCamera();requestAnimationFrame(frame);
+resizeCanvases();state.lastYield=calculateYield();addLog('🏠 曙光城开始自然产生基础资源。','good');addLog('⬡ 选中单位后左键可规划完整六边形路线，右键取消选择。');addLog('⚠️ 灰烬军团能力较弱，但会持续增援。','warn');renderPanels();clampCamera();requestAnimationFrame(frame);

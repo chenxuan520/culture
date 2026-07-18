@@ -400,6 +400,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
         difficultyHint: $('difficultyHint').textContent,
         skirmishHint: $('skirmishHint').textContent,
         mapMode: $('mapModeSelect').value,
+        playerSide: $('playerSideSelect').value,
         leftAI: $('leftAISlots').value,
         rightAI: $('rightAISlots').value,
         workerDefaultAI: $('workerDefaultAI').value,
@@ -411,8 +412,9 @@ test("settings/help panels and intro difficulty text are wired", () => {
   );
   assert.match(result.introDifficulty, /中等/);
   assert.match(result.difficultyHint, /中等/);
-  assert.match(result.skirmishHint, /默认地图 · 1v1/);
+  assert.match(result.skirmishHint, /默认地图 · 左侧开局 · 1v1/);
   assert.equal(result.mapMode, "default");
+  assert.equal(result.playerSide, "left");
   assert.equal(result.leftAI, "0");
   assert.equal(result.rightAI, "1");
   assert.equal(result.workerDefaultAI, "off");
@@ -503,6 +505,44 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.equal(result.allyWorkers, 2);
   assert.ok(result.enemyUnits >= 9);
   assert.ok(result.area >= 840);
+});
+
+test("player side selection swaps starting sides and keeps distinct faction colors", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const rightStart = freshState(false, 'medium', 'default', 2, 3, 'right');
+      state = rightStart;
+      const playerCapital = rightStart.cities.find((city) => city.team === 'player' && city.capital);
+      const enemyCapital = rightStart.cities.find((city) => city.team === 'enemy' && city.capital);
+      const allyFactions = rightStart.cities.filter((city) => city.allyAI).map((city) => city.faction);
+      const enemyFactions = rightStart.cities.filter((city) => city.team === 'enemy').map((city) => city.faction);
+      const factionColors = window.__STARFIRE_DEBUG__.factions();
+      const city = rightStart.cities.find((item) => item.team === 'player' && item.capital);
+      const before = rightStart.units.length;
+      completeProduct(city, { id: 'warrior' });
+      const produced = rightStart.units.slice(before).find((unit) => unit.type === 'warrior');
+      return {
+        playerSide: rightStart.playerSide,
+        playerMapSide: rightStart.playerMapSide,
+        enemyMapSide: rightStart.enemyMapSide,
+        playerRightOfEnemy: playerCapital.q > enemyCapital.q,
+        allyFactions,
+        enemyFactions,
+        distinctStrokes: new Set(['player', 'ally1', 'ally2', 'enemy1', 'enemy2', 'enemy3'].map((key) => factionColors[key].stroke)).size,
+        producedFaction: produced && produced.faction,
+      };
+    })()`,
+  );
+  assert.equal(result.playerSide, "right");
+  assert.equal(result.playerMapSide, "enemy");
+  assert.equal(result.enemyMapSide, "player");
+  assert.equal(result.playerRightOfEnemy, true);
+  assert.deepEqual(plain(result.allyFactions), ["ally1", "ally2"]);
+  assert.deepEqual(plain(result.enemyFactions), ["enemy1", "enemy2", "enemy3"]);
+  assert.equal(result.distinctStrokes, 6);
+  assert.equal(result.producedFaction, "player");
 });
 
 test("ally AI uses independent economy instead of player resources", () => {
@@ -760,6 +800,19 @@ test("RTS control docs mention box select and production hotkeys", () => {
   assert.match(text, /鼠标边缘|地图边缘/);
   assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
   assert.match(text, /打开上次生产基地/);
+});
+
+test("mouse command docs and handlers use left-click commands and right-click deselect", () => {
+  const docs = ["index.html", "assets/js/03-interface-tutorial.js", "assets/js/06-enhancements.js"]
+    .map((file) => fs.readFileSync(path.join(ROOT, file), "utf8"))
+    .join("\n");
+  const bootstrap = fs.readFileSync(path.join(ROOT, "assets/js/05-bootstrap.js"), "utf8");
+  assert.match(docs, /左键.*移动\/攻击|左键.*规划路线/);
+  assert.match(docs, /右键.*取消/);
+  assert.equal(/右键(?:敌人|此设施|目标|要塞|移动|锁敌|规划|攻击)|右键地图(?:让|规划|下达|移动|锁敌)/.test(docs), false);
+  assert.match(bootstrap, /canvas\.addEventListener\('click'[\s\S]*issueCommandAt\(x,y\)/);
+  assert.match(bootstrap, /canvas\.addEventListener\('contextmenu'[\s\S]*state\.selection=null[\s\S]*renderPanels\(\)/);
+  assert.equal(/contextmenu[\s\S]{0,180}issueCommandAt/.test(bootstrap), false);
 });
 
 test("Escape key is wired to pause outside tutorials", () => {
