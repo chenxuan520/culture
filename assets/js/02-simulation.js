@@ -150,7 +150,8 @@ function updateCities(dt){
   for(const c of state.cities){
     if(c.hp<=0)continue;c.flash=Math.max(0,c.flash-dt*2.5);
     if(c.team==='player'&&c.queue.length){
-      const item=c.queue[0],def=productDef(item.id);let mult=1;if(hasBuilding(c,'forge'))mult*=1.25;if(item.id==='kirov'&&hasBuilding(c,'skyDock'))mult*=1.3;
+      const item=c.queue[0],def=productDef(item.id),prod=cityYield(c).production||0;let mult=1+Math.min(3.5,prod/6);if(hasBuilding(c,'forge'))mult*=1.25;if(item.id==='kirov'&&hasBuilding(c,'skyDock'))mult*=1.3;
+      const invest=Math.min(state.resources.production||0,prod*dt*.75);if(invest>0){state.resources.production-=invest;item.progress+=invest*.08;}
       item.progress+=dt*mult;if(item.progress>=item.time){c.queue.shift();completeProduct(c,item);renderPanels();}
     }
     if(c.maxShield>0)c.shield=Math.min(c.maxShield,c.shield+dt*1.3);

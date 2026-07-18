@@ -638,6 +638,32 @@ test("city rally point sends produced combat units to the target tile", () => {
   assert.equal(result.panelShowsRally, true);
 });
 
+test("city production speed scales with production output and consumes production stockpile", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      state.resources.production = 100;
+      city.queue.push({ qid: 'slow', id: 'warrior', progress: 0, time: productDef('warrior').time, cost: {} });
+      const baseProd = cityYield(city).production;
+      updateCities(1);
+      const progressWithoutForge = city.queue[0].progress;
+      const stockAfter = state.resources.production;
+      city.queue = [{ qid: 'fast', id: 'warrior', progress: 0, time: productDef('warrior').time, cost: {} }];
+      city.buildings.push('forge');
+      state.resources.production = 100;
+      updateCities(1);
+      const progressWithForge = city.queue[0]?.progress ?? productDef('warrior').time;
+      return { baseProd, progressWithoutForge, progressWithForge, stockAfter };
+    })()`,
+  );
+  assert.ok(result.baseProd > 0);
+  assert.ok(result.progressWithoutForge > 1);
+  assert.ok(result.progressWithForge > result.progressWithoutForge);
+  assert.ok(result.stockAfter < 100);
+});
+
 test("production hotkeys do not replace product icons", () => {
   const { context } = createHarness();
   const result = runInGame(
