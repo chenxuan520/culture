@@ -537,8 +537,44 @@ test("skirmish setup supports up to 3v3 with valid spawn tiles", () => {
   assert.equal(result.allOnLand, true);
   assert.equal(result.playerWorkers, 3);
   assert.equal(result.allyWorkers, 2);
-  assert.ok(result.enemyUnits >= 9);
+  assert.ok(result.enemyUnits >= 6);
   assert.ok(result.area >= 840);
+});
+
+test("medium 1v1 spark enemy does not open with a full army or instant wave", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const s = freshState(true, 'medium', 'default', 0, 1, 'left', 'ash');
+      state = s;
+      const start = {
+        resources: { ...state.enemyAI.resources },
+        waveTimer: state.enemyAI.waveTimer,
+        enemyUnits: state.units.filter((unit) => unit.team === 'enemy').map((unit) => unit.type),
+      };
+      for (let i = 0; i < 50; i++) simStep(0.2);
+      return {
+        start,
+        after10: {
+          wave: state.enemyAI.waveNumber,
+          enemyUnits: state.units.filter((unit) => unit.team === 'enemy' && unit.hp > 0).map((unit) => unit.type),
+          queues: state.cities.filter((city) => city.team === 'enemy').map((city) => city.queue.map((item) => item.id)),
+        },
+      };
+    })()`,
+  );
+  assert.deepEqual(plain(result.start.enemyUnits), ["warrior", "scout"]);
+  assert.deepEqual(plain(result.start.resources), {
+    food: 88,
+    production: 82,
+    science: 38,
+    gold: 92,
+    energy: 26,
+  });
+  assert.equal(result.start.waveTimer, 14);
+  assert.equal(result.after10.wave, 0);
+  assert.ok(result.after10.enemyUnits.length <= 3);
 });
 
 test("player faction selection changes player colors and units", () => {
@@ -697,6 +733,7 @@ test("ash player makes enemy AI produce spark units and support", () => {
       for (const city of state.cities.filter((item) => item.team === 'enemy')) {
         city.buildings = ['granary', 'forge', 'academy', 'shieldDome', 'quantumRelay'];
       }
+      state.simTime = 20;
       state.enemyAI.thinkTimer = 0;
       state.enemyAI.waveTimer = 99;
       window.__STARFIRE_DEBUG__.updateEnemyStrategicAI(1);
@@ -792,6 +829,8 @@ test("enemy garrison over cap launches an attack instead of camping base", () =>
       state = s;
       const city = state.cities.find((item) => item.team === 'enemy' && item.capital);
       for (let i = 0; i < 10; i++) state.units.push(createUnit('raider', 'enemy', city.q, city.r, { aiOrder: 'garrison' }));
+      state.simTime = 20;
+      state.enemyAI.waveNumber = 1;
       state.enemyAI.waveTimer = 99;
       window.__STARFIRE_DEBUG__.updateEnemyStrategicAI(1);
       return {
