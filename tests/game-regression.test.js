@@ -305,6 +305,38 @@ test("research pacing is not instant-unlock fast", () => {
   assert.ok(result.fastest >= 8);
 });
 
+test("starting production stockpile requires early development choices", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const before = { ...state.resources };
+      const attempted = PRODUCT_IDS.slice(0, 10);
+      for (const id of attempted) queueProduct(city, id);
+      return {
+        starting: before,
+        attemptedCount: attempted.length,
+        queued: city.queue.map((item) => item.id),
+        queueLength: city.queue.length,
+        productionAfter: state.resources.production,
+        goldAfter: state.resources.gold,
+      };
+    })()`,
+  );
+  assert.deepEqual(plain(result.starting), {
+    food: 92,
+    production: 72,
+    science: 42,
+    gold: 118,
+    energy: 32,
+  });
+  assert.ok(result.queueLength < result.attemptedCount);
+  assert.ok(result.queueLength <= 3);
+  assert.ok(result.productionAfter < 20);
+  assert.ok(result.goldAfter < result.starting.gold);
+});
+
 test("enhanced worker initialization keeps player workers usable", () => {
   const { context } = createHarness();
   const result = runInGame(
