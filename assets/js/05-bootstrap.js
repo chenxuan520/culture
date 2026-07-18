@@ -75,7 +75,7 @@ mini.addEventListener('click',e=>{
 function togglePause(){if(!state.started||state.gameOver)return;if(tutorial.active)tutorial.flags.pauseTouched=true;state.paused=!state.paused;toast(state.paused?'⏸ 模拟已暂停。':'▶ 模拟继续运行。');renderTop();updateTutorialTask();}
 window.addEventListener('keydown',e=>{
   const k=e.key;if(k==='F1'){e.preventDefault();if(state.started&&!state.gameOver&&!tutorial.active)openTutorial(false);return;}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(k))e.preventDefault();
-  if(k==='Escape'&&tutorial.active){closeTutorial(false);return;}
+  if(k==='Escape'){e.preventDefault();if(tutorial.active)closeTutorial(false);else togglePause();return;}
   const tag=e.target?.tagName?.toLowerCase();if(tag==='input'||tag==='select'||tag==='textarea')return;
   if(k===' '){state.showIntel=true;if(tutorial.active)tutorial.flags.viewAction=true;return;}if(k.startsWith('Arrow')){state.keys.add(k);if(tutorial.active)tutorial.flags.viewAction=true;return;}
   if((k==='g'||k==='G')&&!e.repeat&&state.started&&!state.gameOver){e.preventDefault();openProductionBase();return;}

@@ -638,6 +638,23 @@ test("city rally point sends produced combat units to the target tile", () => {
   assert.equal(result.panelShowsRally, true);
 });
 
+test("production hotkeys do not replace product icons", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      const html = renderCitySelection(city);
+      return {
+        workerIconKept: html.includes('<div class="pIcon">👷</div>'),
+        hotkeyShown: html.includes('[1] 工人'),
+      };
+    })()`,
+  );
+  assert.equal(result.workerIconKept, true);
+  assert.equal(result.hotkeyShown, true);
+});
+
 test("settler auto-found setting creates a city after route arrival", () => {
   const { context } = createHarness();
   const result = runInGame(
@@ -717,4 +734,9 @@ test("RTS control docs mention box select and production hotkeys", () => {
   assert.match(text, /鼠标边缘|地图边缘/);
   assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
   assert.match(text, /打开上次生产基地/);
+});
+
+test("Escape key is wired to pause outside tutorials", () => {
+  const source = fs.readFileSync(path.join(ROOT, "assets/js/05-bootstrap.js"), "utf8");
+  assert.match(source, /if\(k==='Escape'\).*togglePause\(\)/s);
 });
