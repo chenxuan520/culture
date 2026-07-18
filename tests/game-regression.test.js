@@ -367,7 +367,7 @@ test("manual combat commands target enemy improvements and movement clears hold"
 });
 
 test("settings/help panels and intro difficulty text are wired", () => {
-  const { context } = createHarness();
+  const { context, ids } = createHarness();
   const result = runInGame(
     context,
     `(() => {
@@ -394,6 +394,7 @@ test("settings/help panels and intro difficulty text are wired", () => {
   assert.equal(result.workerDefaultAI, "off");
   assert.equal(result.settingsFn, "function");
   assert.equal(result.helpFn, "function");
+  assert.equal(ids.get("gameSettings").id, "gameSettings");
 });
 
 test("map mode can switch between default and reproducible random layouts", () => {

@@ -186,72 +186,6 @@
             ×
           </button>
         </div>
-        <div id="gameSettings" class="settingsGroup">
-          <div class="settingsGroupHead">
-            <b>敌军 AI</b
-            ><span id="difficultyHint"
-              >中等：敌军拥有独立经济、科研、生产和扩张，会组织波次进攻。</span
-            >
-          </div>
-          <label class="settingLine"
-            ><span>难度</span
-            ><select id="difficultySelect" aria-label="敌军 AI 难度">
-              <option value="easy">🌱 简单</option>
-              <option value="medium" selected>⚔️ 中等</option>
-              <option value="hard">☠️ 困难</option>
-            </select></label
-          >
-          <div class="difficultyButtons">
-            <button class="difficultyBtn" data-difficulty="easy">
-              <b>🌱 简单</b
-              ><span>发展较慢、波次稀疏，不主动扩张。</span></button
-            ><button class="difficultyBtn active" data-difficulty="medium">
-              <b>⚔️ 中等</b
-              ><span>完整发展、第二城市、持续编队进攻。</span></button
-            ><button class="difficultyBtn" data-difficulty="hard">
-              <b>☠️ 困难</b
-              ><span>快速科技、三城扩张、精英军团与堡垒护盾。</span>
-            </button>
-          </div>
-        </div>
-        <div class="settingsGroup">
-          <div class="settingsGroupHead">
-            <b>开局配置</b
-            ><span id="skirmishHint"
-              >默认地图 · 1v1。随机模式会重掷地图面积、地形和资源。</span
-            >
-          </div>
-          <label class="settingLine"
-            ><span>地图</span
-            ><select id="mapModeSelect" aria-label="地图模式">
-              <option value="default" selected>⬡ 默认地图</option>
-              <option value="random">🎲 随机地图</option>
-            </select></label
-          >
-          <label class="settingLine"
-            ><span>左侧 AI</span
-            ><select id="leftAISlots" aria-label="左侧 AI 数量">
-              <option value="0" selected>无，玩家单人</option>
-              <option value="1">+1 盟友 AI</option>
-              <option value="2">+2 盟友 AI</option>
-            </select></label
-          >
-          <label class="settingLine"
-            ><span>右侧 AI</span
-            ><select id="rightAISlots" aria-label="右侧 AI 数量">
-              <option value="1" selected>1 个敌方 AI</option>
-              <option value="2">2 个敌方 AI</option>
-              <option value="3">3 个敌方 AI</option>
-            </select></label
-          >
-          <label class="settingLine"
-            ><span>新工人</span
-            ><select id="workerDefaultAI" aria-label="新工人默认 AI">
-              <option value="off" selected>默认关闭 AI</option>
-              <option value="on">生产后自动开 AI</option>
-            </select></label
-          >
-        </div>
         <div id="audioDock" class="settingsGroup audioDock" aria-live="polite">
           <div class="audioSettingsHead">
             <b>声音</b
@@ -378,7 +312,7 @@
           <section class="helpBlock">
             <h3>开局设置</h3>
             <p>
-              左下角齿轮可以设置地图和对战模式。默认地图保持固定面积和固定地形，适合按教程学习；随机地图会重新掷地图面积、地形和资源分布。左侧 AI 是你的盟友，右侧 AI 是敌人，最多可以设置成 3v3。也可以把“新工人”设为生产后自动开 AI，这样新造出的工人会直接寻找资源地块建设。
+              首页的“定制对局”用于开局前设置地图和对战模式。默认地图保持固定面积和固定地形，适合按教程学习；随机地图会重新掷地图面积、地形和资源分布。左侧 AI 是你的盟友，右侧 AI 是敌人，最多可以设置成 3v3。也可以把“新工人”设为生产后自动开 AI，这样新造出的工人会直接寻找资源地块建设。
             </p>
           </section>
           <section class="helpBlock">
@@ -476,6 +410,69 @@
           到 10× 真正改变整个世界。
         </p>
         <p id="introDifficultyDesc" class="introDifficultyDesc"></p>
+        <div id="gameSettings" class="introSetup">
+          <div class="settingsGroupHead">
+            <b>定制对局</b
+            ><span id="skirmishHint"
+              >默认地图 · 1v1。随机模式会重掷地图面积、地形和资源。</span
+            >
+          </div>
+          <div class="introSetupGrid">
+            <label class="settingLine"
+              ><span>地图</span
+              ><select id="mapModeSelect" aria-label="地图模式">
+                <option value="default" selected>⬡ 默认地图</option>
+                <option value="random">🎲 随机地图</option>
+              </select></label
+            >
+            <label class="settingLine"
+              ><span>敌军</span
+              ><select id="difficultySelect" aria-label="敌军 AI 难度">
+                <option value="easy">🌱 简单</option>
+                <option value="medium" selected>⚔️ 中等</option>
+                <option value="hard">☠️ 困难</option>
+              </select></label
+            >
+            <label class="settingLine"
+              ><span>左侧 AI</span
+              ><select id="leftAISlots" aria-label="左侧 AI 数量">
+                <option value="0" selected>无，玩家单人</option>
+                <option value="1">+1 盟友 AI</option>
+                <option value="2">+2 盟友 AI</option>
+              </select></label
+            >
+            <label class="settingLine"
+              ><span>右侧 AI</span
+              ><select id="rightAISlots" aria-label="右侧 AI 数量">
+                <option value="1" selected>1 个敌方 AI</option>
+                <option value="2">2 个敌方 AI</option>
+                <option value="3">3 个敌方 AI</option>
+              </select></label
+            >
+            <label class="settingLine"
+              ><span>新工人</span
+              ><select id="workerDefaultAI" aria-label="新工人默认 AI">
+                <option value="off" selected>默认关闭 AI</option>
+                <option value="on">生产后自动开 AI</option>
+              </select></label
+            >
+          </div>
+          <div class="difficultyButtons">
+            <button class="difficultyBtn" data-difficulty="easy">
+              <b>🌱 简单</b
+              ><span>发展较慢、波次稀疏，不主动扩张。</span></button
+            ><button class="difficultyBtn active" data-difficulty="medium">
+              <b>⚔️ 中等</b
+              ><span>完整发展、第二城市、持续编队进攻。</span></button
+            ><button class="difficultyBtn" data-difficulty="hard">
+              <b>☠️ 困难</b
+              ><span>快速科技、三城扩张、精英军团与堡垒护盾。</span>
+            </button>
+          </div>
+          <p id="difficultyHint" class="introSetupHint">
+            中等：敌军拥有独立经济、科研、生产和扩张，会组织波次进攻。
+          </p>
+        </div>
         <div class="features">
           <div class="feature">
             <b>⬡ 六边形 RTS</b
