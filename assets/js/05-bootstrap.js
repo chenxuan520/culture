@@ -59,7 +59,6 @@ function resetGame(started=true){
 }
 $('start').addEventListener('click',()=>beginGame(false));
 $('startTutorial').addEventListener('click',()=>beginGame(true));
-$('tutorialHelp').addEventListener('click',()=>openTutorial(false));
 $('tutorialSkip').addEventListener('click',()=>closeTutorial(false));
 $('tutorialDemo').addEventListener('click',demoTutorialStep);
 $('tutorialPrev').addEventListener('click',()=>enterTutorialStep(tutorial.step-1));
@@ -69,11 +68,14 @@ $('endRestart').addEventListener('click',()=>resetGame(true));
 $('pause').addEventListener('click',togglePause);
 $('speed').addEventListener('input',e=>{if(tutorial.active)tutorial.flags.speedTouched=true;state.speed=clamp(Number(e.target.value)||1,.1,10);$('speedText').textContent=state.speed.toFixed(1)+'×';updateTutorialTask();});
 window.addEventListener('resize',()=>{resizeCanvases();clampCamera();if(tutorial.active)requestAnimationFrame(placeTutorial);});
+document.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button,input,select,label,.switchRow,.tech,.product,.settingsPanel,.helpPanel,.tutorialCard'))state.uiHoldUntil=performance.now()+450;
+},true);
 
 function frame(now){
   const realDt=Math.min(.065,Math.max(0,(now-state.lastFrame)/1000));state.lastFrame=now;updateCamera(realDt);
   if(state.started&&!state.paused&&!state.gameOver){state.acc+=realDt*state.speed;let steps=0;while(state.acc>=FIXED_STEP&&steps++<120){simStep(FIXED_STEP);state.acc-=FIXED_STEP;}if(steps>=120)state.acc=0;updateEffects(realDt*Math.min(2.5,Math.max(.22,state.speed)));}
-  drawMap();drawMinimap();renderTop();state.uiTimer+=realDt;if(state.uiTimer>=.18){state.uiTimer=0;renderResearchPanel();renderSelection();renderGlobal();renderLogs();}
+  drawMap();drawMinimap();renderTop();state.uiTimer+=realDt;if(state.uiTimer>=.18&&performance.now()>(state.uiHoldUntil||0)){state.uiTimer=0;renderResearchPanel();renderSelection();renderGlobal();renderLogs();}
   if(tutorial.active){tutorial.checkTimer+=realDt;if(tutorial.checkTimer>=.16){tutorial.checkTimer=0;updateTutorialTask();placeTutorial();}}
   requestAnimationFrame(frame);
 }

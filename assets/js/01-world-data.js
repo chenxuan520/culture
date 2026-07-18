@@ -132,7 +132,7 @@ function productDef(id){return UNIT_DEFS[id]||BUILDING_DEFS[id];}
 function isUnitProduct(id){return !!UNIT_DEFS[id]&&!UNIT_DEFS[id].enemy;}
 function createUnit(type,team,q,r,extra={}){
   const def=UNIT_DEFS[type];
-  return {id:uid('u'),type,def,team,q,r,hp:def.hp,maxHp:def.hp,route:[],moveProgress:0,target:null,manualTarget:false,
+  return {id:uid('u'),type,def,team,q,r,hp:def.hp,maxHp:def.hp,route:[],moveProgress:0,target:null,manualTarget:false,holdPosition:false,
     attackTimer:Math.random()*.4,combatGlow:0,beamTick:0,aiWorker:false,charges:type==='worker'?5:0,work:null,overdrive:0,
     disrupted:0,spawnFlash:1,name:(team==='player'?'': '灰烬·')+def.name,...extra};
 }
@@ -148,7 +148,7 @@ function freshState(started=false){
   const s={started,paused:false,gameOver:false,speed:1,simTime:0,pulseTimer:0,enemySpawnTimer:0,enemyThink:0,
     resources:{food:140,production:220,science:96,gold:260,energy:82},lastYield:{food:0,production:0,science:0,gold:0,energy:0},
     cities:[playerCity,enemyCity],units:[],effects:[],logs:[],completed:new Set(),research:null,aiTech:true,selection:{kind:'city',id:playerCity.id},
-    hovered:null,showIntel:false,keys:new Set(),score:0,era:0,overdriveGlobal:0,uiTimer:0,toastSeq:0,tutorialActive:false,tutorialRewarded:false,
+    hovered:null,showIntel:false,keys:new Set(),score:0,era:0,overdriveGlobal:0,uiTimer:0,uiHoldUntil:0,toastSeq:0,tutorialActive:false,tutorialRewarded:false,
     camera:{x:axialToWorld(5,7).x,y:axialToWorld(5,7).y,zoom:.86},screen:{w:1,h:1,dpr:1},lastFrame:performance.now(),acc:0};
   s.units.push(createUnit('warrior','player',4,7),createUnit('worker','player',3,8),createUnit('scout','player',4,6));
   s.units.push(createUnit('raider','enemy',15,7),createUnit('enemyArcher','enemy',16,8),createUnit('enemyBuggy','enemy',15,6));

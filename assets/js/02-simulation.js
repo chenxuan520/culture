@@ -25,6 +25,7 @@ function findPath(unit,start,goal){
 }
 function setUnitRoute(unit,q,r,announce=false){
   const t=tileAt(q,r);if(!t)return false;
+  if(announce&&unit.team==='player')unit.holdPosition=false;
   const path=findPath(unit,{q:unit.q,r:unit.r},{q,r});
   if(!path.length&&!(unit.q===q&&unit.r===r)){if(announce)toast('没有可通行的路线。','warn');return false;}
   unit.route=path;unit.moveProgress=0;unit.repathTimer=.25;
@@ -232,6 +233,7 @@ function targetAt(q,r,attackerTeam){
 }
 function setLockedTarget(unit,target,manual=true){
   if(!unit||!target||unit.team===target.team)return;unit.target=refFor(target.kind,target.kind==='improvement'?target.tile:target.obj);unit.manualTarget=manual;unit.route=[];unit.moveProgress=0;unit.repathTimer=0;
+  if(manual&&unit.team==='player')unit.holdPosition=false;
   if(manual&&unit.team==='player'){toast(`🎯 ${unit.def.name} 已锁定 ${target.obj.def?.name||target.obj.name||IMPROVEMENTS[target.obj.type]?.name||'目标'}`);addLog(`🎯 ${unit.def.icon} ${unit.def.name} 锁定目标并开始追击。`);}
 }
 function allTargetsFor(team){
@@ -242,6 +244,7 @@ function allTargetsFor(team){
   return out;
 }
 function autoAcquire(unit){
+  if(unit.team==='player'&&unit.holdPosition)return;
   const range=unit.team==='player'?3:7,targets=allTargetsFor(unit.team).filter(t=>{
     const d=hexDistance(unit,t);if(d>range)return false;if(unit.team==='player'&&t.kind==='city'&&allTargetsFor(unit.team).some(x=>x.kind==='unit'&&hexDistance(unit,x)<=3))return false;return true;
   });
@@ -372,8 +375,8 @@ function clearHalfEnemies(){
   for(const u of list.slice(0,n)){u.hp=0;burst(u.q,u.r,'#c997ff',16,.9);}cleanupDead();toast(`🌀 战略指令 C：随机清除了 ${n} 个敌军！`,'good');addLog(`🌀 奇点脉冲抹除了 ${n} 个敌方单位。`,'good');state.score+=n*35;renderPanels();
 }
 function activateOverdrive(unit){
-  if(!unit||unit.team!=='player'||!unit.def.combat)return;if(unit.overdrive>0){toast('该单位已处于超载协议中。','warn');return;}
-  if(!pay({energy:25})){toast('需要 ⚡25 才能启动超载协议。','warn');return;}unit.overdrive=8;toast(`⚡ ${unit.def.name} 启动超载：8 秒火力与机动增强！`,'good');addLog(`⚡ ${unit.def.name} 启动超载协议。`,'good');burst(unit.q,unit.r,'#59dcff',16,.8);renderPanels();
+  if(!unit||unit.team!=='player'||!unit.def.combat)return;if(unit.overdrive>0){toast('该单位已经在短时强化中。','warn');return;}
+  if(!pay({energy:25})){toast('需要 ⚡25 才能短时强化。','warn');return;}unit.overdrive=8;toast(`⚡ ${unit.def.name} 强化 8 秒：火力与移动提升！`,'good');addLog(`⚡ ${unit.def.name} 启动短时强化。`,'good');burst(unit.q,unit.r,'#59dcff',16,.8);renderPanels();
 }
 function endGame(win){
   if(state.gameOver)return;if(tutorial.active)closeTutorial(false,true);state.gameOver=true;state.paused=true;$('end').classList.remove('hidden');$('endKicker').textContent=win?'Civilization ascendant':'Civilization fallen';$('endTitle').textContent=win?'🌌 星火文明胜利':'🌑 曙光城陷落';

@@ -49,19 +49,32 @@
   canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
 
   const settingsLayer=$('settingsLayer'),settingsGear=$('settingsGear'),settingsClose=$('settingsClose');
+  const helpLayer=$('helpLayer'),helpGear=$('helpGear'),helpClose=$('helpClose');
   function toggleSettings(open){
     if(!settingsLayer)return;
     settingsLayer.classList.toggle('hidden',!open);
     settingsGear?.classList.toggle('active',!!open);
+    if(open)toggleHelp(false);
+  }
+  function toggleHelp(open){
+    if(!helpLayer)return;
+    helpLayer.classList.toggle('hidden',!open);
+    helpGear?.classList.toggle('active',!!open);
+    if(open)toggleSettings(false);
   }
   settingsGear?.addEventListener('click',()=>toggleSettings(settingsLayer.classList.contains('hidden')));
   settingsClose?.addEventListener('click',()=>toggleSettings(false));
+  helpGear?.addEventListener('click',()=>toggleHelp(helpLayer.classList.contains('hidden')));
+  helpClose?.addEventListener('click',()=>toggleHelp(false));
   document.addEventListener('click',e=>{
-    if(!settingsLayer||settingsLayer.classList.contains('hidden'))return;
-    if(settingsLayer.contains(e.target)||settingsGear?.contains(e.target))return;
-    toggleSettings(false);
+    if(settingsLayer&&!settingsLayer.classList.contains('hidden')&&!settingsLayer.contains(e.target)&&!settingsGear?.contains(e.target))toggleSettings(false);
+    if(helpLayer&&!helpLayer.classList.contains('hidden')&&!helpLayer.contains(e.target)&&!helpGear?.contains(e.target))toggleHelp(false);
   });
-  window.addEventListener('keydown',e=>{if(e.key==='Escape')toggleSettings(false);});
+  window.addEventListener('keydown',e=>{
+    const tag=e.target?.tagName?.toLowerCase();
+    if(e.key==='?'&&tag!=='input'&&tag!=='select'&&tag!=='textarea'){e.preventDefault();toggleHelp(true);return;}
+    if(e.key==='Escape'){toggleSettings(false);toggleHelp(false);}
+  });
 
   // Small test hook used only for local verification; harmless during normal play.
   if(window.__STARFIRE_DEBUG__){
