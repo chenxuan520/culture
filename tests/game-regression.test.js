@@ -520,6 +520,8 @@ test("player faction selection changes player colors and units", () => {
       const enemyCapital = rightStart.cities.find((city) => city.team === 'enemy' && city.capital);
       const allyFactions = rightStart.cities.filter((city) => city.allyAI).map((city) => city.faction);
       const enemyFactions = rightStart.cities.filter((city) => city.team === 'enemy').map((city) => city.faction);
+      const enemyUnitTypes = rightStart.units.filter((unit) => unit.team === 'enemy').map((unit) => unit.type);
+      const availableEnemyTypes = window.__STARFIRE_DEBUG__.enemyCombatTypes();
       const mainUnits = rightStart.units.filter((unit) => unit.team === 'player' && !unit.allyAI).map((unit) => unit.type);
       const allyUnits = rightStart.units.filter((unit) => unit.team === 'player' && unit.allyAI).map((unit) => unit.type);
       const factionColors = window.__STARFIRE_DEBUG__.factions();
@@ -547,11 +549,14 @@ test("player faction selection changes player colors and units", () => {
         playerFaction: playerCapital.faction,
         allyFactions,
         enemyFactions,
+        enemyUnitTypes,
+        availableEnemyTypes,
         mainUnits,
         allyUnits,
         roster: PRODUCT_IDS.slice(0, 8),
         distinctStrokes: new Set(colorKeys.map((key) => factionColors[key].stroke)).size,
-        closePairs: colorKeys.flatMap((a, i) => colorKeys.slice(i + 1).map((b) => [a, b, colorDistance(a, b)])).filter((item) => item[2] < 90),
+        closePairs: colorKeys.filter((key) => key !== 'black').flatMap((a, i, list) => list.slice(i + 1).map((b) => [a, b, colorDistance(a, b)])).filter((item) => item[2] < 90),
+        blackUsesDarkDisplay: factionColors.black.stroke === '#0f172a' && factionColors.black.health === '#111827' && factionColors.black.mini === '#020617' && factionColors.black.unitMini === '#111827',
         allColorsExist: colorKeys.every((key) => !!factionColors[key]),
         producedFaction: produced && produced.faction,
         producedType: produced && produced.type,
@@ -568,14 +573,84 @@ test("player faction selection changes player colors and units", () => {
   assert.equal(result.enemyCapitalName, "曙光城");
   assert.deepEqual(plain(result.allyFactions), ["black", "purple"]);
   assert.deepEqual(plain(result.enemyFactions), ["blue", "green", "yellow"]);
+  assert.equal(plain(result.enemyUnitTypes).every((id) => ["archer", "scout", "warrior"].includes(id)), true);
+  assert.equal(plain(result.enemyUnitTypes).some((id) => ["raider", "enemyArcher", "enemyBuggy", "enemySiege", "enemyDrone", "enemyTitan"].includes(id)), false);
+  assert.equal(plain(result.availableEnemyTypes).some((id) => ["raider", "enemyArcher", "enemyBuggy", "enemySiege", "enemyDrone", "enemyTitan"].includes(id)), false);
   assert.deepEqual(plain(result.mainUnits.sort()), ["enemyArcher", "enemyWorker", "raider"].sort());
   assert.deepEqual(plain(result.allyUnits.sort()), ["enemyArcher", "enemyArcher", "enemyWorker", "enemyWorker"].sort());
   assert.deepEqual(plain(result.roster), ["enemyWorker", "enemySettler", "raider", "enemyArcher", "enemyBuggy", "enemySiege", "enemyDrone", "enemyTitan"]);
   assert.equal(result.distinctStrokes, 6);
   assert.deepEqual(plain(result.closePairs), []);
+  assert.equal(result.blackUsesDarkDisplay, true);
   assert.equal(result.allColorsExist, true);
   assert.equal(result.producedFaction, "red");
   assert.equal(result.producedType, "raider");
+});
+
+test("ash player makes enemy AI produce spark units and support", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const ashIds = ['enemyWorker', 'enemySettler', 'raider', 'enemyArcher', 'enemyBuggy', 'enemySiege', 'enemyDrone', 'enemyTitan', 'ashGranary', 'warLab', 'warFoundry', 'bastion', 'warCore'];
+      const sparkIds = ['worker', 'settler', 'scout', 'warrior', 'archer', 'knight', 'tank', 'prism', 'kirov', 'quantumWalker', 'granary', 'forge', 'academy', 'shieldDome', 'quantumRelay'];
+
+      const supportState = freshState(true, 'medium', 'default', 0, 2, 'left', 'ash');
+      state = supportState;
+      Object.assign(state.enemyAI.resources, { food: 999, production: 999, science: 999, gold: 999, energy: 999 });
+      state.enemyAI.thinkTimer = 0;
+      state.enemyAI.waveTimer = 99;
+      window.__STARFIRE_DEBUG__.updateEnemyStrategicAI(1);
+      const supportQueue = state.cities.filter((city) => city.team === 'enemy').flatMap((city) => city.queue.map((item) => item.id));
+
+      const combatState = freshState(true, 'medium', 'default', 0, 2, 'left', 'ash');
+      state = combatState;
+      Object.assign(state.enemyAI.resources, { food: 999, production: 999, science: 999, gold: 999, energy: 999 });
+      TECHS.forEach((tech) => state.enemyAI.completed.add(tech.id));
+      let improvements = 0;
+      for (const tile of tiles.values()) {
+        if (improvements >= 8) break;
+        if (!isLand(tile) || cityAt(tile.q, tile.r)) continue;
+        tile.improvement = { type: 'farm', team: 'enemy', owner: 'enemy', hp: 10, maxHp: 10, faction: 'blue' };
+        improvements++;
+      }
+      for (const city of state.cities.filter((item) => item.team === 'enemy')) {
+        city.buildings = ['granary', 'forge', 'academy', 'shieldDome', 'quantumRelay'];
+      }
+      state.enemyAI.thinkTimer = 0;
+      state.enemyAI.waveTimer = 99;
+      window.__STARFIRE_DEBUG__.updateEnemyStrategicAI(1);
+      const combatQueue = state.cities.filter((city) => city.team === 'enemy').flatMap((city) => city.queue.map((item) => item.id));
+      const before = state.units.length;
+      const city = state.cities.find((item) => item.team === 'enemy' && item.queue.length);
+      if (city) {
+        city.queue[0].progress = city.queue[0].time;
+        updateCities(0.1);
+      }
+      const produced = state.units.slice(before).filter((unit) => unit.team === 'enemy').map((unit) => ({
+        type: unit.type,
+        name: unit.name,
+        faction: unit.faction,
+      }));
+
+      return {
+        supportQueue,
+        supportHasAsh: supportQueue.some((id) => ashIds.includes(id)),
+        combatQueue,
+        combatHasAsh: combatQueue.some((id) => ashIds.includes(id)),
+        combatAllSpark: combatQueue.every((id) => sparkIds.includes(id)),
+        produced,
+        producedHasAsh: produced.some((unit) => ashIds.includes(unit.type) || unit.name.includes('灰烬')),
+      };
+    })()`,
+  );
+  assert.deepEqual(plain(result.supportQueue), ["worker", "worker"]);
+  assert.equal(result.supportHasAsh, false);
+  assert.ok(result.combatQueue.length > 0);
+  assert.equal(result.combatHasAsh, false);
+  assert.equal(result.combatAllSpark, true);
+  assert.equal(result.producedHasAsh, false);
+  assert.equal(plain(result.produced).every((unit) => ["blue", "green", "yellow"].includes(unit.faction)), true);
 });
 
 test("ally AI uses independent economy instead of player resources", () => {
@@ -860,6 +935,23 @@ test("WASD camera movement has no A command conflict", () => {
   assert.match(bootstrap, /state\.keys\.delete\(e\.code\)/);
   assert.match(enhancements, /state\.keys\.has\('KeyA'\)\)dx--/);
   assert.equal(/const edge=28|screen\.w-edge|screen\.h-edge/.test(bootstrap + enhancements), false);
+});
+
+test("updateCamera consumes keyboard movement codes", () => {
+  const { context } = createHarness();
+  const moved = runInGame(
+    context,
+    `(() => {
+      const before = {...state.camera};
+      state.keys.clear();
+      state.keys.add('KeyD');
+      updateCamera(0.2);
+      const after = {...state.camera};
+      state.keys.clear();
+      return Math.hypot(after.x - before.x, after.y - before.y);
+    })()`,
+  );
+  assert.ok(moved > 1);
 });
 
 test("right mouse drag pans map when no unit selection exists", () => {
