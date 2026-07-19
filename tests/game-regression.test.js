@@ -17,6 +17,7 @@ const JS_FILES = [
 ];
 
 function makeElement(id = "") {
+  const listeners = {};
   return {
     id,
     textContent: "",
@@ -44,8 +45,18 @@ function makeElement(id = "") {
         return this.classes.has(item);
       },
     },
-    addEventListener() {},
-    dispatchEvent() {},
+    addEventListener(type, handler) {
+      listeners[type] = listeners[type] || [];
+      listeners[type].push(handler);
+    },
+    dispatchEvent(event) {
+      event.target = event.target || this;
+      for (const handler of listeners[event.type] || []) handler.call(this, event);
+      return true;
+    },
+    click() {
+      this.dispatchEvent({ type: "click", target: this, preventDefault() {} });
+    },
     querySelector() {
       return null;
     },
@@ -289,7 +300,7 @@ test("research starts at zero and default pulse adds one science", () => {
     `(() => {
       const cheapest = Math.min(...TECHS.map((tech) => tech.cost));
       const secondCheapest = TECHS.map((tech) => tech.cost).sort((a, b) => a - b)[1];
-      const fastest = Math.min(...TECHS.map((tech) => tech.time));
+      const techTimes = Object.fromEntries(TECHS.map((tech) => [tech.id, tech.time]));
       const city = state.cities.find((item) => item.team === 'player' && item.capital);
       const pulseYield = cityYield(city);
       return {
@@ -298,7 +309,7 @@ test("research starts at zero and default pulse adds one science", () => {
         pulseScience: pulseYield.science,
         cheapest,
         secondCheapest,
-        fastest,
+        techTimes,
         canStartOne: state.resources.science >= cheapest,
         cannotBuyTwo: state.resources.science < cheapest + secondCheapest,
       };
@@ -316,7 +327,52 @@ test("research starts at zero and default pulse adds one science", () => {
   assert.equal(result.canStartOne, false);
   assert.equal(result.cannotBuyTwo, true);
   assert.ok(result.cheapest <= 14);
-  assert.ok(result.fastest >= 8);
+  assert.equal(result.techTimes.agriculture, 5.3);
+  assert.equal(result.techTimes.engineering, 8.7);
+  assert.equal(result.techTimes.singularity, 25.3);
+});
+
+test("research time is reduced by one third without changing production times", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => ({
+      techTimes: Object.fromEntries(TECHS.map((tech) => [tech.id, tech.time])),
+      unitTimes: {
+        worker: UNIT_DEFS.worker.time,
+        warrior: UNIT_DEFS.warrior.time,
+        scout: UNIT_DEFS.scout.time,
+        kirov: UNIT_DEFS.kirov.time,
+      },
+      buildingTimes: {
+        granary: BUILDING_DEFS.granary.time,
+        forge: BUILDING_DEFS.forge.time,
+      },
+    }))()`,
+  );
+  assert.deepEqual(plain(result.techTimes), {
+    agriculture: 5.3,
+    mining: 6,
+    engineering: 8.7,
+    tactics: 9.3,
+    combustion: 12,
+    electricity: 12,
+    aeronautics: 16,
+    prismatics: 16,
+    automation: 20,
+    quantum: 21.3,
+    singularity: 25.3,
+  });
+  assert.deepEqual(plain(result.unitTimes), {
+    worker: 2.0,
+    warrior: 2.1,
+    scout: 1.6,
+    kirov: 4.2,
+  });
+  assert.deepEqual(plain(result.buildingTimes), {
+    granary: 1.8,
+    forge: 2.4,
+  });
 });
 
 test("starting production stockpile requires early development choices", () => {
@@ -550,6 +606,34 @@ test("settings/help panels and intro difficulty text are wired", () => {
   assert.equal(result.settingsFn, "function");
   assert.equal(result.helpFn, "function");
   assert.equal(ids.get("gameSettings").id, "gameSettings");
+  assert.equal(ids.get("homeRestart").id, "homeRestart");
+});
+
+test("right sidebar home button returns to intro setup", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      beginGame(false);
+      const startedBefore = state.started;
+      const introHiddenBefore = $('intro').classList.contains('hidden');
+      $('homeRestart').click();
+      return {
+        startedBefore,
+        introHiddenBefore,
+        startedAfter: state.started,
+        introHiddenAfter: $('intro').classList.contains('hidden'),
+        mapMode: $('mapModeSelect').value,
+        difficulty: $('difficultySelect').value,
+      };
+    })()`,
+  );
+  assert.equal(result.startedBefore, true);
+  assert.equal(result.introHiddenBefore, true);
+  assert.equal(result.startedAfter, false);
+  assert.equal(result.introHiddenAfter, false);
+  assert.equal(result.mapMode, "default");
+  assert.equal(result.difficulty, "medium");
 });
 
 test("worker default AI is a runtime setting, not an intro skirmish option", () => {

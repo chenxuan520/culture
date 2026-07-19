@@ -109,6 +109,7 @@ $('tutorialDemo').addEventListener('click',demoTutorialStep);
 $('tutorialPrev').addEventListener('click',()=>enterTutorialStep(tutorial.step-1));
 $('tutorialNext').addEventListener('click',()=>{if(tutorial.step>=TUTORIAL_STEPS.length-1)closeTutorial(true);else enterTutorialStep(tutorial.step+1);});
 $('restart').addEventListener('click',()=>{resetGame(true);toast('↻ 世界已重置，新的文明开始。','good');});
+$('homeRestart').addEventListener('click',()=>{resetGame(false);toast('已回到主页，可以重新设置对局。','good');});
 $('endRestart').addEventListener('click',()=>resetGame(true));
 $('pause').addEventListener('click',togglePause);
 $('speed').addEventListener('input',e=>{if(tutorial.active)tutorial.flags.speedTouched=true;state.speed=clamp(Number(e.target.value)||1,.1,10);$('speedText').textContent=state.speed.toFixed(1)+'×';updateTutorialTask();});

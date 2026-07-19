@@ -40,17 +40,17 @@ const ERAS = [
   {name:'现代时代',icon:'📡'}, {name:'原子时代',icon:'⚛️'}, {name:'未来时代',icon:'🌌'}
 ];
 const TECHS = [
-  {id:'agriculture',name:'灌溉网络',icon:'🌱',era:0,time:8,cost:12,pre:[],desc:'强化基础农田体系，城市食物脉冲 +1。',unlock:['farm']},
-  {id:'mining',name:'深层采矿',icon:'⛏️',era:0,time:9,cost:14,pre:[],desc:'强化矿山与伐木体系，并解锁星晶实验站。',unlock:['mine','lumber','lab']},
-  {id:'engineering',name:'模块化工程',icon:'🏗️',era:1,time:13,cost:30,pre:['agriculture','mining'],desc:'解锁锻造工坊、维修无人机和开拓者。',unlock:['forge','repairDrone','settler']},
-  {id:'tactics',name:'联合作战学',icon:'🎯',era:1,time:14,cost:32,pre:['mining'],desc:'解锁弓手、骑士与兵种配合加成。',unlock:['archer','knight']},
-  {id:'combustion',name:'内燃机与装甲',icon:'🛞',era:2,time:18,cost:48,pre:['engineering'],desc:'解锁主战坦克与深层萃取井。',unlock:['tank','extractor']},
-  {id:'electricity',name:'城市电网',icon:'⚡',era:2,time:18,cost:48,pre:['engineering'],desc:'解锁学院、日冕电站与护盾穹顶。',unlock:['academy','solar','shieldDome']},
-  {id:'aeronautics',name:'反重力航空',icon:'🎈',era:3,time:24,cost:72,pre:['combustion','electricity'],desc:'解锁空港与基洛夫飞艇。',unlock:['skyDock','kirov']},
-  {id:'prismatics',name:'光棱共振',icon:'🔷',era:3,time:24,cost:72,pre:['electricity','tactics'],desc:'解锁光棱坦克与光棱矩阵。',unlock:['prism','prismMatrix']},
-  {id:'automation',name:'自治工团',icon:'🤖',era:4,time:30,cost:104,pre:['aeronautics'],desc:'工人 AI 建造更快，维修半径提升。',unlock:['automation']},
-  {id:'quantum',name:'量子纠缠武器',icon:'🌀',era:4,time:32,cost:110,pre:['prismatics'],desc:'解锁量子行者与量子中继站。',unlock:['quantumWalker','quantumRelay']},
-  {id:'singularity',name:'可控奇点',icon:'🌌',era:5,time:38,cost:150,pre:['automation','quantum'],desc:'全军获得 20% 火力，城市每脉冲生成额外能量。',unlock:['singularity']}
+  {id:'agriculture',name:'灌溉网络',icon:'🌱',era:0,time:5.3,cost:12,pre:[],desc:'强化基础农田体系，城市食物脉冲 +1。',unlock:['farm']},
+  {id:'mining',name:'深层采矿',icon:'⛏️',era:0,time:6,cost:14,pre:[],desc:'强化矿山与伐木体系，并解锁星晶实验站。',unlock:['mine','lumber','lab']},
+  {id:'engineering',name:'模块化工程',icon:'🏗️',era:1,time:8.7,cost:30,pre:['agriculture','mining'],desc:'解锁锻造工坊、维修无人机和开拓者。',unlock:['forge','repairDrone','settler']},
+  {id:'tactics',name:'联合作战学',icon:'🎯',era:1,time:9.3,cost:32,pre:['mining'],desc:'解锁弓手、骑士与兵种配合加成。',unlock:['archer','knight']},
+  {id:'combustion',name:'内燃机与装甲',icon:'🛞',era:2,time:12,cost:48,pre:['engineering'],desc:'解锁主战坦克与深层萃取井。',unlock:['tank','extractor']},
+  {id:'electricity',name:'城市电网',icon:'⚡',era:2,time:12,cost:48,pre:['engineering'],desc:'解锁学院、日冕电站与护盾穹顶。',unlock:['academy','solar','shieldDome']},
+  {id:'aeronautics',name:'反重力航空',icon:'🎈',era:3,time:16,cost:72,pre:['combustion','electricity'],desc:'解锁空港与基洛夫飞艇。',unlock:['skyDock','kirov']},
+  {id:'prismatics',name:'光棱共振',icon:'🔷',era:3,time:16,cost:72,pre:['electricity','tactics'],desc:'解锁光棱坦克与光棱矩阵。',unlock:['prism','prismMatrix']},
+  {id:'automation',name:'自治工团',icon:'🤖',era:4,time:20,cost:104,pre:['aeronautics'],desc:'工人 AI 建造更快，维修半径提升。',unlock:['automation']},
+  {id:'quantum',name:'量子纠缠武器',icon:'🌀',era:4,time:21.3,cost:110,pre:['prismatics'],desc:'解锁量子行者与量子中继站。',unlock:['quantumWalker','quantumRelay']},
+  {id:'singularity',name:'可控奇点',icon:'🌌',era:5,time:25.3,cost:150,pre:['automation','quantum'],desc:'全军获得 20% 火力，城市每脉冲生成额外能量。',unlock:['singularity']}
 ];
 const UNIT_DEFS = {
   worker:{name:'工人',icon:'👷',role:'支援',hp:105,attack:2,range:1,interval:1.35,move:1.15,cost:{food:10,production:18,gold:8},time:2.0,tech:null,combat:false,desc:'拥有 5 次建设次数，可开启 AI 因地制宜建造并维修附近友军。'},
