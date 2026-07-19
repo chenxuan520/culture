@@ -88,7 +88,7 @@ window.addEventListener('keydown',e=>{
   if(k===' '){state.showIntel=true;if(tutorial.active)tutorial.flags.viewAction=true;return;}if(MOVE_KEYS.has(code)){state.keys.add(code);if(tutorial.active)tutorial.flags.viewAction=true;return;}
   if((k==='h'||k==='H')&&!e.repeat&&state.started&&!state.gameOver){e.preventDefault();openProductionBase();return;}
   const hotkeys=['1','2','3','4','5','6','7','8','9','0'];const hotIndex=hotkeys.indexOf(k);
-  if(hotIndex>=0&&state.selection?.kind==='city'&&state.started&&!state.gameOver){const c=cityById(state.selection.id);if(c&&!c.allyAI&&c.team==='player'){e.preventDefault();const id=PRODUCT_IDS[hotIndex];if(id)queueProduct(c,id);return;}}
+  if(hotIndex>=0&&state.selection?.kind==='city'&&state.started&&!state.gameOver){const c=cityById(state.selection.id);if(c&&!c.allyAI&&c.team==='player'){e.preventDefault();const id=PRODUCT_IDS[hotIndex];if(id)queueProduct(c,id,e.shiftKey?5:1);return;}}
   if((k==='p'||k==='P')&&!e.repeat)togglePause();if((k==='c'||k==='C')&&!e.repeat&&state.started&&!state.gameOver)clearHalfEnemies();
 });
 window.addEventListener('keyup',e=>{state.keys.delete(e.code);if(e.key===' ')state.showIntel=false;});

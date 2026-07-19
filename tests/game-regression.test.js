@@ -64,7 +64,13 @@ function makeElement(id = "") {
       return [];
     },
     appendChild(child) {
+      child.remove = () => {
+        const index = this.children.indexOf(child);
+        if (index >= 0) this.children.splice(index, 1);
+        this.firstElementChild = this.children[0] || null;
+      };
       this.children.push(child);
+      this.firstElementChild = this.children[0] || null;
       return child;
     },
     setAttribute() {},
@@ -162,8 +168,17 @@ function createHarness() {
       return makeElement();
     },
   };
+  const windowListeners = {};
   const window = {
-    addEventListener() {},
+    addEventListener(type, handler) {
+      windowListeners[type] = windowListeners[type] || [];
+      windowListeners[type].push(handler);
+    },
+    dispatchEvent(event) {
+      event.target = event.target || document.body || makeElement();
+      for (const handler of windowListeners[event.type] || []) handler.call(window, event);
+      return true;
+    },
     AudioContext: null,
     webkitAudioContext: null,
     __STARFIRE_DEBUG__: {},
@@ -1151,6 +1166,67 @@ test("city production speed scales with production output and consumes productio
   assert.ok(result.stockAfter < 100);
 });
 
+test("player city production queue is unlimited and groups consecutive items", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      state.resources.food = 1000;
+      state.resources.production = 1000;
+      state.resources.gold = 1000;
+      for (let i = 0; i < 9; i++) queueProduct(city, 'warrior');
+      const html = renderCitySelection(city);
+      return {
+        queueLength: city.queue.length,
+        allWarriors: city.queue.every((item) => item.id === 'warrior'),
+        statShowsRawLength: html.includes('队列</small><b>9 项</b>'),
+        groupedLabel: html.includes('近卫军 ×9'),
+        hasOldLimit: html.includes('/7') || html.includes('队列已满'),
+      };
+    })()`,
+  );
+  assert.equal(result.queueLength, 9);
+  assert.equal(result.allWarriors, true);
+  assert.equal(result.statShowsRawLength, true);
+  assert.equal(result.groupedLabel, true);
+  assert.equal(result.hasOldLimit, false);
+});
+
+test("Shift plus production hotkey queues five units", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const city = state.cities.find((item) => item.team === 'player' && item.capital);
+      state.started = true;
+      state.selection = { kind: 'city', id: city.id };
+      state.resources.food = 1000;
+      state.resources.production = 1000;
+      state.resources.gold = 1000;
+      let prevented = false;
+      window.dispatchEvent({
+        type: 'keydown',
+        key: '1',
+        code: 'Digit1',
+        shiftKey: true,
+        target: { tagName: 'BODY' },
+        preventDefault() { prevented = true; },
+      });
+      return {
+        prevented,
+        queueLength: city.queue.length,
+        queued: city.queue.map((item) => item.id),
+        html: renderCitySelection(city),
+      };
+    })()`,
+  );
+  assert.equal(result.prevented, true);
+  assert.equal(result.queueLength, 5);
+  assert.deepEqual(plain(result.queued), ["worker", "worker", "worker", "worker", "worker"]);
+  assert.equal(result.html.includes("工人 ×5"), true);
+});
+
 test("production hotkeys do not replace product icons", () => {
   const { context } = createHarness();
   const result = runInGame(
@@ -1248,6 +1324,8 @@ test("RTS control docs mention box select and production hotkeys", () => {
   assert.match(text, /右键拖动地图|右键拖图|拖动地图/);
   assert.equal(/鼠标边缘|地图边缘|靠边滚屏|靠近边缘|自动滚动视野|自动平移视野/.test(text), false);
   assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
+  assert.match(text, /Shift\+1-9\/0|Shift \+ 1-9 \/ 0|Shift\+1-9 \/ 0/);
+  assert.equal(/队列满了|队列已满/.test(text), false);
   assert.match(text, /打开上次生产基地/);
   assert.match(text, /<span(?: class="key")?>H<\/span><b?>?|<span class="key">H<\/span> 打开上次生产基地/);
   assert.equal(/<span(?: class="key")?>G<\/span>(?:<b>)?打开上次生产基地|<span class="key">G<\/span> 打开上次生产基地/.test(text), false);

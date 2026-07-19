@@ -119,13 +119,17 @@ function updateResearch(dt){
   if(!state.research){chooseAIResearch();return;}
   state.research.progress+=dt;if(state.research.progress>=state.research.time)finishResearch();
 }
-function queueProduct(city,id){
+function queueProduct(city,id,count=1){
   if(!city||city.team!=='player'||!hasProductUnlock(id))return;
   const def=productDef(id);if(!def)return;
-  if(BUILDING_DEFS[id]&&(city.buildings.includes(id)||city.queue.some(x=>x.id===id))){toast('该城市已拥有或正在建造此建筑。','warn');return;}
-  if(city.queue.length>=7){toast('建造队列已满。','warn');return;}
-  const cost=deepCost(def.cost);if(!pay(cost)){toast('资源不足，无法加入队列。','warn');return;}
-  city.queue.push({qid:uid('q'),id,progress:0,time:def.time,cost});addLog(`🏠 ${city.name} 将「${def.name}」加入建造队列。`);toast(`已排入队列：${def.icon} ${def.name}`);renderPanels();
+  const target=Math.max(1,Math.floor(Number(count)||1));let added=0;
+  for(let i=0;i<target;i++){
+    if(BUILDING_DEFS[id]&&(city.buildings.includes(id)||city.queue.some(x=>x.id===id))){if(!added)toast('该城市已拥有或正在建造此建筑。','warn');break;}
+    const cost=deepCost(def.cost);if(!pay(cost)){if(!added)toast('资源不足，无法加入队列。','warn');break;}
+    city.queue.push({qid:uid('q'),id,progress:0,time:def.time,cost});added++;
+  }
+  if(added){addLog(`🏠 ${city.name} 将「${def.name}」加入建造队列${added>1?` ×${added}`:''}。`);toast(`已排入队列：${def.icon} ${def.name}${added>1?` ×${added}`:''}`);renderPanels();}
+  return added;
 }
 function cancelQueue(city,qid){
   const i=city.queue.findIndex(x=>x.qid===qid);if(i<0)return;const item=city.queue[i],def=productDef(item.id);refund(item.cost);city.queue.splice(i,1);
