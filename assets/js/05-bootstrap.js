@@ -22,6 +22,19 @@ function selectedPlayerUnits(){
   if(state.selection?.kind==='units')return state.selection.ids.map(unitById).filter(u=>u&&u.team==='player');
   return [];
 }
+function assignControlGroup(key){
+  const units=selectedPlayerUnits();if(!units.length){toast('先选中己方单位，再按 Ctrl+数字编组。','warn');return false;}
+  state.controlGroups=state.controlGroups||{};state.controlGroups[key]=units.map(u=>u.id);
+  toast(`⌗ 编队 ${key} 已保存 ${units.length} 个单位。`,'good');return true;
+}
+function recallControlGroup(key){
+  const ids=(state.controlGroups&&state.controlGroups[key])||[],alive=ids.filter(id=>unitById(id));
+  if(!alive.length){if(ids.length){toast(`编队 ${key} 的单位已全部阵亡。`,'warn');delete state.controlGroups[key];}else toast(`编队 ${key} 还没有单位。`,'warn');return false;}
+  const wasSame=(state.selection?.kind==='unit'&&alive.length===1&&state.selection.id===alive[0])||(state.selection?.kind==='units'&&state.selection.ids.length===alive.length&&alive.every(id=>state.selection.ids.includes(id)));
+  state.controlGroups[key]=alive;state.selection=alive.length===1?{kind:'unit',id:alive[0]}:{kind:'units',ids:alive};
+  if(wasSame){const us=alive.map(unitById);centerOn(Math.round(us.reduce((s,u)=>s+u.q,0)/us.length),Math.round(us.reduce((s,u)=>s+u.r,0)/us.length));}
+  renderPanels();toast(`⌗ 编队 ${key}：${alive.length} 个单位。`,'good');return true;
+}
 function selectHit(hit){
   if(!hit)return;
   if(hit.kind==='unit')state.selection={kind:'unit',id:hit.obj.id};
@@ -88,7 +101,9 @@ window.addEventListener('keydown',e=>{
   if(k===' '){state.showIntel=true;if(tutorial.active)tutorial.flags.viewAction=true;return;}if(MOVE_KEYS.has(code)){state.keys.add(code);if(tutorial.active)tutorial.flags.viewAction=true;return;}
   if((k==='h'||k==='H')&&!e.repeat&&state.started&&!state.gameOver){e.preventDefault();openProductionBase();return;}
   const hotkeys=['1','2','3','4','5','6','7','8','9','0'];const hotIndex=hotkeys.indexOf(k);
+  if(hotIndex>=0&&(e.ctrlKey||e.metaKey)&&state.started&&!state.gameOver){e.preventDefault();assignControlGroup(k);return;}
   if(hotIndex>=0&&state.selection?.kind==='city'&&state.started&&!state.gameOver){const c=cityById(state.selection.id);if(c&&!c.allyAI&&c.team==='player'){e.preventDefault();const id=PRODUCT_IDS[hotIndex];if(id)queueProduct(c,id,e.shiftKey?5:1);return;}}
+  if(hotIndex>=0&&state.started&&!state.gameOver){e.preventDefault();recallControlGroup(k);return;}
   if((k==='p'||k==='P')&&!e.repeat)togglePause();if((k==='c'||k==='C')&&!e.repeat&&state.started&&!state.gameOver)clearHalfEnemies();
 });
 window.addEventListener('keyup',e=>{state.keys.delete(e.code);if(e.key===' ')state.showIntel=false;});

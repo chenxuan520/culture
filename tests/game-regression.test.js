@@ -1227,6 +1227,67 @@ test("Shift plus production hotkey queues five units", () => {
   assert.equal(result.html.includes("工人 ×5"), true);
 });
 
+test("control groups assign with Ctrl+digit and recall with digit", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const dispatch = (opts) => { let prevented = false; window.dispatchEvent({ type: 'keydown', target: { tagName: 'BODY' }, preventDefault() { prevented = true; }, ...opts }); return prevented; };
+      state.started = true;
+      const combat = state.units.filter((u) => u.team === 'player' && u.def.combat).slice(0, 2);
+      state.selection = { kind: 'units', ids: combat.map((u) => u.id) };
+      const assignedPrevented = dispatch({ key: '1', code: 'Digit1', ctrlKey: true });
+      const savedIds = [...(state.controlGroups['1'] || [])];
+      // Clear selection, then recall with plain digit.
+      state.selection = null;
+      const recallPrevented = dispatch({ key: '1', code: 'Digit1' });
+      const afterRecall = state.selection;
+      // A city being selected keeps digits as production, not recall.
+      const city = state.cities.find((c) => c.team === 'player' && c.capital);
+      state.selection = { kind: 'city', id: city.id };
+      state.resources.food = 1000; state.resources.production = 1000; state.resources.gold = 1000;
+      dispatch({ key: '1', code: 'Digit1' });
+      const cityStayed = state.selection.kind === 'city' && city.queue.length > 0;
+      return {
+        assignedPrevented,
+        recallPrevented,
+        savedCount: savedIds.length,
+        recalledKind: afterRecall && afterRecall.kind,
+        recalledCount: afterRecall && afterRecall.ids ? afterRecall.ids.length : (afterRecall && afterRecall.id ? 1 : 0),
+        cityStayed,
+      };
+    })()`,
+  );
+  assert.equal(result.assignedPrevented, true);
+  assert.equal(result.savedCount, 2);
+  assert.equal(result.recallPrevented, true);
+  assert.equal(result.recalledKind, "units");
+  assert.equal(result.recalledCount, 2);
+  assert.equal(result.cityStayed, true);
+});
+
+test("recalling the active control group again centers the camera", () => {
+  const { context } = createHarness();
+  const result = runInGame(
+    context,
+    `(() => {
+      const dispatch = (opts) => window.dispatchEvent({ type: 'keydown', target: { tagName: 'BODY' }, preventDefault() {}, ...opts });
+      state.started = true;
+      const unit = state.units.find((u) => u.team === 'player' && u.def.combat);
+      unit.q = mapWidth() - 3; unit.r = mapHeight() - 3;
+      state.selection = { kind: 'unit', id: unit.id };
+      dispatch({ key: '2', code: 'Digit2', ctrlKey: true });
+      state.selection = null;
+      dispatch({ key: '2', code: 'Digit2' });
+      const before = { ...state.camera };
+      dispatch({ key: '2', code: 'Digit2' });
+      const after = { ...state.camera };
+      return { moved: before.x !== after.x || before.y !== after.y };
+    })()`,
+  );
+  assert.equal(result.moved, true);
+});
+
 test("production hotkeys do not replace product icons", () => {
   const { context } = createHarness();
   const result = runInGame(
@@ -1325,6 +1386,7 @@ test("RTS control docs mention box select and production hotkeys", () => {
   assert.equal(/鼠标边缘|地图边缘|靠边滚屏|靠近边缘|自动滚动视野|自动平移视野/.test(text), false);
   assert.match(text, /1-9\s*\/\s*0|1-9\/0/);
   assert.match(text, /Shift\+1-9\/0|Shift \+ 1-9 \/ 0|Shift\+1-9 \/ 0/);
+  assert.match(text, /Ctrl\+1-9\/0|Ctrl \+ 1-9 \/ 0|Ctrl\+1-9 \/ 0/);
   assert.equal(/队列满了|队列已满/.test(text), false);
   assert.match(text, /打开上次生产基地/);
   assert.match(text, /<span(?: class="key")?>H<\/span><b?>?|<span class="key">H<\/span> 打开上次生产基地/);
